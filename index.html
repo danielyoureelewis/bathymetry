@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Spore / Ink - Tactical Acoustics Engine</title>
     <style>
         :root {
@@ -39,6 +39,7 @@
             border-radius: 4px;
             box-shadow: 0 0 40px rgba(0, 0, 0, 1), 10px 10px 20px rgba(0,0,0,0.8);
             cursor: none;
+            transform-origin: top center;
         }
         
         #ui-header {
@@ -119,6 +120,7 @@
             cursor: none; 
             position: relative;
             z-index: 1;
+            touch-action: none; /* Prevents mobile browser pull-to-refresh */
         }
 
         /* --- MULTI-PAGE TACTICAL OVERLAY --- */
@@ -197,7 +199,7 @@
         /* --- HARDWARE PLATE --- */
         .nato-plate {
             background: var(--nato-metal);
-            padding: 16px 24px; /* Increased padding to give screws physical clearance */
+            padding: 10px 14px;
             border-radius: 2px;
             border: 1px solid #9db0a5;
             border-bottom: 2px solid #5a6660;
@@ -225,10 +227,10 @@
             box-shadow: 0 1px 0 rgba(255,255,255,0.2);
             transform: rotate(45deg);
         }
-        .screw.tl { top: 5px; left: 5px; transform: rotate(12deg); }
-        .screw.tr { top: 5px; right: 5px; transform: rotate(-24deg); }
-        .screw.bl { bottom: 5px; left: 5px; transform: rotate(85deg); }
-        .screw.br { bottom: 5px; right: 5px; transform: rotate(-8deg); }
+        .screw.tl { top: 6px; left: 6px; transform: rotate(12deg); }
+        .screw.tr { top: 6px; right: 6px; transform: rotate(-24deg); }
+        .screw.bl { bottom: 6px; left: 6px; transform: rotate(85deg); }
+        .screw.br { bottom: 6px; right: 6px; transform: rotate(-8deg); }
 
         /* --- ROTARY CAM SWITCH --- */
         .cam-switch-module {
@@ -524,7 +526,7 @@
                 <div class="screw bl"></div>
                 <div class="screw br"></div>
 
-                <div class="cam-switch-module" onmousedown="hardwareRotaryClick(); toggleGameMode()">
+                <div class="cam-switch-module" onmousedown="hardwareRotaryClick(); toggleGameMode()" ontouchstart="hardwareRotaryClick(); toggleGameMode(); event.preventDefault()">
                     <div class="cam-plate">
                         <span class="cam-label man">2P</span>
                         <span class="cam-label auto">CPU</span>
@@ -534,13 +536,13 @@
                     </div>
                 </div>
 
-                <button id="infoToggleBtn" class="btn-toggle active" onmousedown="hardwareClick(); toggleHelp()" onmouseup="hardwareRelease()" onmouseleave="hardwareRelease()">
+                <button id="infoToggleBtn" class="btn-toggle active" onmousedown="hardwareClick(); toggleHelp()" onmouseup="hardwareRelease()" onmouseleave="hardwareRelease()" ontouchstart="hardwareClick(); toggleHelp(); event.preventDefault()" ontouchend="hardwareRelease()">
                     <span>INFO</span><span>ON</span>
                 </button>
-                <button id="audioToggleBtn" class="btn-toggle" onmousedown="hardwareClick(); toggleAudio()" onmouseup="hardwareRelease()" onmouseleave="hardwareRelease()">
+                <button id="audioToggleBtn" class="btn-toggle" onmousedown="hardwareClick(); toggleAudio()" onmouseup="hardwareRelease()" onmouseleave="hardwareRelease()" ontouchstart="hardwareClick(); toggleAudio(); event.preventDefault()" ontouchend="hardwareRelease()">
                     <span>AUDIO</span><span>OFF</span>
                 </button>
-                <button id="terrainToggleBtn" class="btn-toggle" onmousedown="hardwareClick(); toggleTerrainPeek()" onmouseup="hardwareRelease()" onmouseleave="hardwareRelease()">
+                <button id="terrainToggleBtn" class="btn-toggle" onmousedown="hardwareClick(); toggleTerrainPeek()" onmouseup="hardwareRelease()" onmouseleave="hardwareRelease()" ontouchstart="hardwareClick(); toggleTerrainPeek(); event.preventDefault()" ontouchend="hardwareRelease()">
                     <span>PEEK</span><span>OFF</span>
                 </button>
                 
@@ -555,15 +557,15 @@
                         <span class="nixie-on" id="freqVal">2</span>
                     </div>
                     <div class="rocker-switch">
-                        <button class="rocker-btn up" onmousedown="hardwareClick(); changeFreq(1)" onmouseup="hardwareRelease()" onmouseleave="hardwareRelease()">▲</button>
-                        <button class="rocker-btn down" onmousedown="hardwareClick(); changeFreq(-1)" onmouseup="hardwareRelease()" onmouseleave="hardwareRelease()">▼</button>
+                        <button class="rocker-btn up" onmousedown="hardwareClick(); changeFreq(1)" onmouseup="hardwareRelease()" onmouseleave="hardwareRelease()" ontouchstart="hardwareClick(); changeFreq(1); event.preventDefault()" ontouchend="hardwareRelease()">▲</button>
+                        <button class="rocker-btn down" onmousedown="hardwareClick(); changeFreq(-1)" onmouseup="hardwareRelease()" onmouseleave="hardwareRelease()" ontouchstart="hardwareClick(); changeFreq(-1); event.preventDefault()" ontouchend="hardwareRelease()">▼</button>
                     </div>
                 </div>
             </div>
         </div>
         
         <div id="canvas-wrapper" class="tty-screen">
-            <div id="help-overlay" onmousedown="advanceHelp()">
+            <div id="help-overlay" onmousedown="advanceHelp()" ontouchstart="advanceHelp(); event.preventDefault()">
                 
                 <div id="help-page-0" class="help-page active">
                     <h2>> SYS_MANUAL: OBJECTIVE</h2>
@@ -577,8 +579,8 @@
                 <div id="help-page-1" class="help-page">
                     <h2>> SYS_MANUAL: HARDWARE OP</h2>
                     <ul>
-                        <li><strong>DEPLOYMENT:</strong> Click the grid to drop an acoustic node. Hardware cannot be placed within 15px of existing nodes (indicated by the Red Zone crosshair).</li>
-                        <li><strong>OSC FREQ:</strong> Use the Rocker Switch to dial your output frequency (1-9) <em>before</em> clicking to deploy.</li>
+                        <li><strong>DEPLOYMENT:</strong> Touch/click and drag to acquire target coordinates. Release to drop payload. Hardware cannot be placed within 15px of existing nodes (Red Zone crosshair).</li>
+                        <li><strong>OSC FREQ:</strong> Use the Rocker Switch to dial your output frequency (1-9) <em>before</em> initiating a drop sequence.</li>
                         <li><strong>PEEK:</strong> Toggle to strip away the wave simulation and analyze raw underlying topography.</li>
                         <li><strong>CPU MODE:</strong> Rotate the cam switch to alternate between 2P LOCAL and CPU operation.</li>
                     </ul>
@@ -626,6 +628,24 @@
     </div>
 
 <script>
+    // --- RESPONSIVE MOBILE SCALING ---
+    function resizeUI() {
+        const container = document.getElementById('game-container');
+        const availableWidth = window.innerWidth - 20; 
+        const scale = Math.min(availableWidth / 1004, 1); // 960px content + borders/padding
+        
+        if (scale < 1) {
+            container.style.transform = `scale(${scale})`;
+            container.style.marginBottom = `-${container.offsetHeight * (1 - scale)}px`;
+        } else {
+            container.style.transform = 'none';
+            container.style.marginBottom = '0px';
+        }
+    }
+    window.addEventListener('resize', resizeUI);
+    window.addEventListener('orientationchange', resizeUI);
+    resizeUI(); // Initial call
+
     let audioCtx = null;
     let audioEnabled = false;
     let helpEnabled = true; 
@@ -989,6 +1009,7 @@
     let mouseX = -100;
     let mouseY = -100;
     let isHovering = false;
+    let isTargeting = false;
 
     function getAmplitude(harmonic) {
         if (harmonic === 2) return 5000;  
@@ -1000,16 +1021,73 @@
     const simH = 540;
     const bufferSize = simW * simH;
 
-    canvas.addEventListener('mousemove', (e) => {
+    // --- NEW: DRAG-TO-TARGET INPUT SYSTEM ---
+    function updateMousePos(e) {
         const rect = canvas.getBoundingClientRect();
         const scaleX = simW / rect.width;
         const scaleY = simH / rect.height;
-        mouseX = (e.clientX - rect.left) * scaleX;
-        mouseY = (e.clientY - rect.top) * scaleY;
-    });
+        
+        let isTouch = e.touches && e.touches.length > 0;
+        let clientX = isTouch ? e.touches[0].clientX : (e.clientX || 0);
+        let clientY = isTouch ? e.touches[0].clientY : (e.clientY || 0);
+        
+        // Fat Finger Offset: push the mobile targeting crosshair 60px ABOVE the thumb
+        if (isTouch) {
+            clientY -= 60; 
+        }
+        
+        if (e.type !== 'touchend') {
+            mouseX = (clientX - rect.left) * scaleX;
+            mouseY = (clientY - rect.top) * scaleY;
+        }
+    }
 
+    function handleInputStart(e) {
+        if (gameOver || evaluatingWin || helpEnabled || (vsCpu && activeColor === 1 && isCpuThinking)) return;
+        if (activeColor === 0 && p1Drops <= 0) return;
+        if (activeColor === 1 && p2Drops <= 0) return;
+        
+        isTargeting = true;
+        isHovering = true;
+        updateMousePos(e);
+        
+        if (e.type === 'touchstart') e.preventDefault();
+    }
+
+    function handleInputMove(e) {
+        updateMousePos(e);
+        if (isTargeting && e.type === 'touchmove') e.preventDefault();
+    }
+
+    function handleInputEnd(e) {
+        if (isTargeting) {
+            isTargeting = false;
+            if (mouseX >= 0 && mouseX < simW && mouseY >= 0 && mouseY < simH) {
+                let isValidPlacement = true;
+                for (let n of nodes) {
+                    if (Math.hypot(n.x - mouseX, n.y - mouseY) < EXCLUSION_RADIUS) {
+                        isValidPlacement = false;
+                        break;
+                    }
+                }
+                if (isValidPlacement) {
+                    executePlayerMove(mouseX, mouseY, activeColor, currentHarmonic);
+                }
+            }
+            if (e.type === 'touchend') isHovering = false; 
+        }
+    }
+
+    canvas.addEventListener('mousedown', handleInputStart);
+    canvas.addEventListener('mousemove', handleInputMove);
+    canvas.addEventListener('mouseup', handleInputEnd);
+    canvas.addEventListener('mouseleave', () => { isHovering = false; isTargeting = false; });
     canvas.addEventListener('mouseenter', () => isHovering = true);
-    canvas.addEventListener('mouseleave', () => isHovering = false);
+
+    canvas.addEventListener('touchstart', handleInputStart, {passive: false});
+    canvas.addEventListener('touchmove', handleInputMove, {passive: false});
+    canvas.addEventListener('touchend', handleInputEnd);
+    canvas.addEventListener('touchcancel', () => { isHovering = false; isTargeting = false; });
 
     function toggleTerrainPeek() {
         peekTerrain = !peekTerrain;
@@ -1161,28 +1239,6 @@
     let nodes = [];
     let ripples = []; 
     let time = 0;
-
-    canvas.addEventListener('mousedown', (e) => {
-        if (gameOver || evaluatingWin || helpEnabled || (vsCpu && activeColor === 1 && isCpuThinking)) return; 
-        
-        if (activeColor === 0 && p1Drops <= 0) return;
-        if (activeColor === 1 && p2Drops <= 0) return;
-        
-        if (mouseX >= 0 && mouseX < simW && mouseY >= 0 && mouseY < simH) {
-            
-            let isValidPlacement = true;
-            for (let n of nodes) {
-                if (Math.hypot(n.x - mouseX, n.y - mouseY) < EXCLUSION_RADIUS) {
-                    isValidPlacement = false;
-                    break;
-                }
-            }
-
-            if (isValidPlacement) {
-                executePlayerMove(mouseX, mouseY, activeColor, currentHarmonic);
-            }
-        }
-    });
 
     function executePlayerMove(x, y, player, harmonic) {
         if (player === 0) p1Drops--;
@@ -1568,7 +1624,7 @@
             ctx.fillText(displayChar, node.x, node.y);
         }
 
-        if (isHovering && !gameOver && !evaluatingWin && !helpEnabled && !(vsCpu && activeColor === 1 && isCpuThinking)) {
+        if (isTargeting && !gameOver && !evaluatingWin && !helpEnabled && !(vsCpu && activeColor === 1 && isCpuThinking)) {
             
             let isValidPlacement = true;
             for (let n of nodes) {
