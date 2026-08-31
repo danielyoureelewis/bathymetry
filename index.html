@@ -1,0 +1,1646 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spore / Ink - Tactical Acoustics Engine</title>
+    <style>
+        :root {
+            --ultramarine: #3b82f6;
+            --amber: #ffb000;
+            --nixie-glow: #ff5500;
+            --nixie-core: #ffaa00;
+            --error-red: #ff4444;
+            --dark-bg: #030303;
+            --panel-bg: #111111;
+            --nato-metal: #84968d;
+        }
+        body {
+            background-color: var(--dark-bg);
+            color: #ddd;
+            font-family: 'Courier New', Courier, monospace;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin: 0;
+            padding-top: 20px;
+            padding-bottom: 30px;
+            user-select: none;
+            overflow-x: hidden;
+        }
+        
+        #game-container {
+            position: relative;
+            padding: 20px;
+            background: var(--panel-bg);
+            border: 2px solid #333;
+            border-top: 2px solid #555;
+            border-left: 2px solid #555;
+            border-radius: 4px;
+            box-shadow: 0 0 40px rgba(0, 0, 0, 1), 10px 10px 20px rgba(0,0,0,0.8);
+            cursor: none;
+        }
+        
+        #ui-header {
+            width: 960px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+            padding-bottom: 14px;
+            border-bottom: 2px solid #080808;
+            box-shadow: 0 2px 0 #222; 
+        }
+        
+        /* --- TTY / CRT SCREEN --- */
+        .tty-screen {
+            background: #050805;
+            border: 4px solid #1a1a1a;
+            border-top-color: #080808;
+            border-left-color: #080808;
+            border-bottom-color: #2c2c2c;
+            border-right-color: #2c2c2c;
+            border-radius: 4px;
+            box-shadow: inset 0 0 15px rgba(0,0,0,1), 2px 2px 8px rgba(0,0,0,0.8);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .tty-screen::after {
+            content: " ";
+            display: block;
+            position: absolute;
+            top: 0; left: 0; bottom: 0; right: 0;
+            background: linear-gradient(rgba(0, 0, 0, 0) 50%, rgba(0, 0, 0, 0.4) 50%);
+            z-index: 10;
+            background-size: 100% 4px;
+            pointer-events: none;
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.9);
+        }
+
+        .tty-text {
+            font-family: 'Courier New', Courier, monospace;
+            font-weight: bold;
+            letter-spacing: 1px;
+            position: relative;
+            z-index: 5;
+            text-shadow: 0 0 6px currentColor, 0 0 2px currentColor;
+        }
+
+        #turn-indicator {
+            width: 440px; 
+            height: 64px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 1.05rem;
+            color: var(--ultramarine);
+            text-transform: uppercase;
+            text-align: center;
+            padding: 0 12px;
+            box-sizing: border-box;
+        }
+
+        /* --- EXPANDED CANVAS DISPLAY --- */
+        #canvas-wrapper {
+            width: 960px;
+            height: 540px;
+            margin: 0 auto;
+            padding: 0;
+        }
+        
+        canvas {
+            background-color: #000;
+            width: 960px; 
+            height: 540px;
+            display: block;
+            image-rendering: pixelated; 
+            border: none;
+            cursor: none; 
+            position: relative;
+            z-index: 1;
+        }
+
+        /* --- MULTI-PAGE TACTICAL OVERLAY --- */
+        #help-overlay {
+            position: absolute;
+            inset: 0;
+            background: rgba(3, 5, 3, 0.94);
+            z-index: 5;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 40px;
+            box-sizing: border-box;
+            color: #5a7a6a;
+            text-shadow: 0 0 6px #5a7a6a;
+            font-family: 'Courier New', Courier, monospace;
+            text-align: left;
+            cursor: pointer;
+        }
+        #help-overlay.hidden {
+            display: none;
+        }
+        .help-page {
+            display: none;
+            flex-direction: column;
+            align-items: flex-start;
+            max-width: 720px;
+            height: 320px; 
+        }
+        .help-page.active {
+            display: flex;
+        }
+        #help-overlay h2 {
+            color: var(--amber);
+            text-shadow: 0 0 8px var(--amber);
+            margin-top: 0;
+            margin-bottom: 25px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            font-size: 1.6rem;
+        }
+        #help-overlay ul {
+            list-style: none;
+            padding: 0;
+            margin: 0 0 35px 0;
+            width: 100%;
+        }
+        #help-overlay li {
+            margin-bottom: 18px;
+            line-height: 1.6;
+            font-size: 1rem;
+            border-left: 2px solid #2a3a2a;
+            padding-left: 14px;
+        }
+        #help-overlay strong {
+            color: #88aa99;
+        }
+        .blink-container {
+            position: absolute;
+            bottom: 40px;
+            width: 100%;
+            text-align: center;
+        }
+        .blink-text {
+            animation: blinker 1.5s linear infinite;
+            color: var(--ultramarine);
+            text-shadow: 0 0 8px var(--ultramarine);
+            font-weight: bold;
+            font-size: 1.1rem;
+        }
+        @keyframes blinker {
+            50% { opacity: 0; }
+        }
+
+        /* --- HARDWARE PLATE --- */
+        .nato-plate {
+            background: var(--nato-metal);
+            padding: 16px 24px; /* Increased padding to give screws physical clearance */
+            border-radius: 2px;
+            border: 1px solid #9db0a5;
+            border-bottom: 2px solid #5a6660;
+            border-right: 2px solid #5a6660;
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.1), 4px 4px 15px rgba(0,0,0,0.8);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            position: relative;
+        }
+        .screw {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #bbb, #555);
+            border: 1px solid #333;
+            box-shadow: inset 0 0 3px rgba(0,0,0,0.8), 1px 1px 1px rgba(255,255,255,0.4);
+            position: absolute;
+        }
+        .screw::after {
+            content: "";
+            position: absolute;
+            top: 4px; left: 1px; right: 1px; height: 1.5px;
+            background: #222;
+            box-shadow: 0 1px 0 rgba(255,255,255,0.2);
+            transform: rotate(45deg);
+        }
+        .screw.tl { top: 5px; left: 5px; transform: rotate(12deg); }
+        .screw.tr { top: 5px; right: 5px; transform: rotate(-24deg); }
+        .screw.bl { bottom: 5px; left: 5px; transform: rotate(85deg); }
+        .screw.br { bottom: 5px; right: 5px; transform: rotate(-8deg); }
+
+        /* --- ROTARY CAM SWITCH --- */
+        .cam-switch-module {
+            width: 62px;
+            height: 62px;
+            background: #111;
+            border: 3px solid #1f1f1f;
+            border-top-color: #333;
+            border-left-color: #333;
+            border-radius: 4px;
+            box-shadow: 3px 3px 8px rgba(0,0,0,0.8);
+            position: relative;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            box-sizing: border-box;
+        }
+        .cam-plate {
+            width: 50px;
+            height: 50px;
+            background: linear-gradient(135deg, #dedede 0%, #bcbcbc 50%, #ededed 100%);
+            border: 1px solid #777;
+            border-radius: 2px;
+            box-shadow: inset 0 0 4px rgba(0,0,0,0.4);
+            position: relative;
+        }
+        .cam-label {
+            position: absolute;
+            font-family: Arial, sans-serif;
+            font-size: 0.58rem;
+            font-weight: 900;
+            color: #111;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .cam-label.man { top: 3px; left: 4px; }
+        .cam-label.auto { top: 3px; right: 4px; }
+        
+        .cam-knob-base {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: #151515;
+            position: absolute;
+            top: 9px;
+            left: 9px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.7), inset 0 0 3px #333;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .cam-pointer {
+            width: 9px;
+            height: 30px;
+            background: linear-gradient(to right, #1a1a1a, #333 50%, #111 100%);
+            border-radius: 3px 3px 2px 2px;
+            position: absolute;
+            top: -5px;
+            transform-origin: 4.5px 21px;
+            transition: transform 0.12s cubic-bezier(0.2, 0.9, 0.3, 1.2);
+            box-shadow: 2px 3px 6px rgba(0,0,0,0.9);
+            border: 1px solid #000;
+            box-sizing: border-box;
+        }
+        .cam-pointer::after {
+            content: "";
+            position: absolute;
+            top: 2px;
+            left: 3px;
+            width: 1.5px;
+            height: 8px;
+            background: #ffffff;
+            box-shadow: 0 0 2px #fff;
+        }
+        .cam-pointer.pos-left { transform: rotate(-38deg); }
+        .cam-pointer.pos-right { transform: rotate(38deg); }
+
+        /* --- BUTTONS --- */
+        .btn-toggle {
+            width: 52px;
+            height: 52px;
+            appearance: none;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background: #1a0a00; 
+            color: #773311;
+            border: 7px solid #181818;
+            border-top-color: #2a2a2a;
+            border-left-color: #2a2a2a;
+            border-bottom-color: #0a0a0a;
+            border-right-color: #0a0a0a;
+            border-radius: 3px;
+            font-family: 'Courier New', Courier, monospace;
+            font-weight: bold;
+            font-size: 0.65rem;
+            line-height: 1.15;
+            cursor: pointer;
+            box-shadow: 4px 4px 8px rgba(0,0,0,0.7), inset 0 0 4px #000;
+            transition: transform 0.05s;
+        }
+        .btn-toggle:active {
+            transform: translateY(3px) translateX(1px);
+            box-shadow: 1px 1px 2px rgba(0,0,0,0.9), inset 0 0 6px #000;
+        }
+        .btn-toggle.active {
+            background: radial-gradient(circle at center, #ffe89e 0%, #ff6a00 55%, #992200 100%);
+            color: #fff;
+            text-shadow: 0 0 2px #fff, 0 0 8px #ff0000;
+            box-shadow: 4px 4px 8px rgba(0,0,0,0.7), inset 0 0 12px rgba(80, 0, 0, 0.9);
+        }
+
+        /* --- NIXIE & ROCKER MODULE --- */
+        .hardware-module {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: #111;
+            padding: 5px 8px;
+            border-radius: 2px;
+            border: 1px solid #000;
+            box-shadow: inset 2px 2px 10px rgba(0,0,0,1), 1px 1px 0 rgba(255,255,255,0.2);
+            margin-left: 2px;
+        }
+        .module-label {
+            font-size: 0.68rem;
+            color: #777;
+            font-weight: bold;
+            letter-spacing: 1px;
+            display: flex;
+            flex-direction: column;
+            text-align: right;
+        }
+        .nixie-tube {
+            position: relative;
+            width: 30px;
+            height: 44px;
+            background: linear-gradient(to bottom, #111, #000);
+            border: 2px solid #000;
+            border-radius: 10px 10px 4px 4px;
+            box-shadow: inset 0 0 10px #000, 0 2px 0 rgba(255,255,255,0.1);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+        }
+        .nixie-mesh {
+            position: absolute;
+            inset: 0;
+            background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.4) 2px, rgba(0,0,0,0.4) 4px);
+            z-index: 3;
+            pointer-events: none;
+        }
+        .nixie-off {
+            position: absolute;
+            color: rgba(255, 85, 0, 0.08); 
+            font-size: 2rem;
+            z-index: 1;
+        }
+        .nixie-on {
+            position: absolute;
+            color: var(--nixie-core);
+            font-size: 2rem;
+            text-shadow: 0 0 6px var(--nixie-glow), 0 0 12px red;
+            z-index: 2;
+        }
+        .rocker-switch {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+        .rocker-btn {
+            background: linear-gradient(to right, #333, #111);
+            color: #777;
+            border: 1px solid #000;
+            height: 20px;
+            width: 28px;
+            cursor: pointer;
+            font-size: 0.65rem;
+            box-shadow: 2px 2px 3px rgba(0,0,0,0.8);
+        }
+        .rocker-btn.up { border-radius: 3px 3px 0 0; border-top: 1px solid #555; }
+        .rocker-btn.down { border-radius: 0 0 3px 3px; border-bottom: 1px solid #000;}
+        .rocker-btn:active {
+            background: #0a0a0a;
+            color: var(--nixie-core);
+            box-shadow: inset 1px 1px 4px rgba(0,0,0,0.9);
+            border-top: 1px solid #000;
+        }
+
+        /* --- SEGMENTED CAPTURE BAR --- */
+        #scoreBoard {
+            width: 960px;
+            height: 32px;
+            margin-top: 16px;
+            background: #080808;
+            border: 6px solid #1a1a1a;
+            border-top-color: #2c2c2c;
+            border-left-color: #2c2c2c;
+            border-bottom-color: #0d0d0d;
+            border-right-color: #0d0d0d;
+            border-radius: 3px;
+            box-shadow: inset 0 0 15px rgba(0,0,0,1), 4px 4px 10px rgba(0,0,0,0.8);
+            position: relative;
+            display: flex;
+            overflow: hidden;
+            box-sizing: border-box;
+        }
+        #scoreBoard::after {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background: repeating-linear-gradient(90deg, 
+                transparent, transparent 6px, 
+                rgba(0,0,0,0.85) 6px, rgba(0,0,0,0.85) 8px
+            );
+            z-index: 10;
+            pointer-events: none;
+            box-shadow: inset 0 2px 8px rgba(0,0,0,0.8);
+        }
+        #meterScale {
+            position: absolute;
+            inset: 0;
+            z-index: 20;
+            pointer-events: none;
+        }
+        .meter-tick {
+            position: absolute;
+            bottom: 0;
+            width: 2px;
+            background: rgba(255, 255, 255, 0.4);
+            height: 8px;
+            transform: translateX(-50%);
+        }
+        .meter-label {
+            position: absolute;
+            bottom: 6px;
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 0.65rem;
+            font-weight: bold;
+            font-family: 'Courier New', Courier, monospace;
+            transform: translateX(-50%);
+            text-shadow: 1px 1px 0 #000;
+        }
+        .meter-crit-tick {
+            position: absolute;
+            bottom: 0;
+            width: 2px;
+            background: var(--error-red);
+            height: 100%;
+            transform: translateX(-50%);
+            box-shadow: 0 0 6px var(--error-red);
+        }
+        .meter-crit-label {
+            position: absolute;
+            top: 2px;
+            color: #ffaaaa;
+            font-size: 0.55rem;
+            font-weight: bold;
+            transform: translateX(-50%);
+            text-shadow: 0 0 5px var(--error-red), 1px 1px 0 #000;
+        }
+
+        #barBlue { 
+            background: var(--ultramarine); 
+            box-shadow: 0 0 15px var(--ultramarine), inset 0 0 10px rgba(255,255,255,0.4);
+            width: 0%; 
+            transition: width 0.4s cubic-bezier(0.1, 0.7, 0.3, 1); 
+            z-index: 1;
+        }
+        #barNeutral { height: 100%; background: transparent; width: 100%; transition: width 0.4s cubic-bezier(0.1, 0.7, 0.3, 1); }
+        #barAmber { 
+            background: var(--nixie-glow); 
+            box-shadow: 0 0 15px var(--nixie-glow), inset 0 0 10px rgba(255,255,255,0.4);
+            width: 0%; 
+            transition: width 0.4s cubic-bezier(0.1, 0.7, 0.3, 1); 
+            z-index: 1;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="game-container">
+        <div id="ui-header">
+            <div id="turn-indicator" class="tty-screen tty-text">> CH 1 (ULTRAMARINE) ACTIVE - 64 DROPS LEFT</div>
+            
+            <div class="nato-plate">
+                <div class="screw tl"></div>
+                <div class="screw tr"></div>
+                <div class="screw bl"></div>
+                <div class="screw br"></div>
+
+                <div class="cam-switch-module" onmousedown="hardwareRotaryClick(); toggleGameMode()">
+                    <div class="cam-plate">
+                        <span class="cam-label man">2P</span>
+                        <span class="cam-label auto">CPU</span>
+                        <div class="cam-knob-base">
+                            <div id="cam-pointer" class="cam-pointer pos-left"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <button id="infoToggleBtn" class="btn-toggle active" onmousedown="hardwareClick(); toggleHelp()" onmouseup="hardwareRelease()" onmouseleave="hardwareRelease()">
+                    <span>INFO</span><span>ON</span>
+                </button>
+                <button id="audioToggleBtn" class="btn-toggle" onmousedown="hardwareClick(); toggleAudio()" onmouseup="hardwareRelease()" onmouseleave="hardwareRelease()">
+                    <span>AUDIO</span><span>OFF</span>
+                </button>
+                <button id="terrainToggleBtn" class="btn-toggle" onmousedown="hardwareClick(); toggleTerrainPeek()" onmouseup="hardwareRelease()" onmouseleave="hardwareRelease()">
+                    <span>PEEK</span><span>OFF</span>
+                </button>
+                
+                <div class="hardware-module">
+                    <div class="module-label">
+                        <span>OSC</span>
+                        <span>FREQ</span>
+                    </div>
+                    <div class="nixie-tube">
+                        <div class="nixie-mesh"></div>
+                        <span class="nixie-off">8</span>
+                        <span class="nixie-on" id="freqVal">2</span>
+                    </div>
+                    <div class="rocker-switch">
+                        <button class="rocker-btn up" onmousedown="hardwareClick(); changeFreq(1)" onmouseup="hardwareRelease()" onmouseleave="hardwareRelease()">▲</button>
+                        <button class="rocker-btn down" onmousedown="hardwareClick(); changeFreq(-1)" onmouseup="hardwareRelease()" onmouseleave="hardwareRelease()">▼</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div id="canvas-wrapper" class="tty-screen">
+            <div id="help-overlay" onmousedown="advanceHelp()">
+                
+                <div id="help-page-0" class="help-page active">
+                    <h2>> SYS_MANUAL: OBJECTIVE</h2>
+                    <ul>
+                        <li><strong>CONCEPT:</strong> Welcome to the Acoustic Bathymetry Simulator. Your directive is to dominate the topographical grid using kinetic wave resonance.</li>
+                        <li><strong>VICTORY (ATTRITION):</strong> Both operators possess exactly 64 hardware drops. Exhaust the payload and hold <strong>>50%</strong> territory during the final analysis.</li>
+                        <li><strong>VICTORY (THE CRUCIBLE):</strong> Push your resonance past the <strong>55% CRIT threshold</strong> (marked on the meter) to trigger an immediate, irreversible system assimilation.</li>
+                    </ul>
+                </div>
+
+                <div id="help-page-1" class="help-page">
+                    <h2>> SYS_MANUAL: HARDWARE OP</h2>
+                    <ul>
+                        <li><strong>DEPLOYMENT:</strong> Click the grid to drop an acoustic node. Hardware cannot be placed within 15px of existing nodes (indicated by the Red Zone crosshair).</li>
+                        <li><strong>OSC FREQ:</strong> Use the Rocker Switch to dial your output frequency (1-9) <em>before</em> clicking to deploy.</li>
+                        <li><strong>PEEK:</strong> Toggle to strip away the wave simulation and analyze raw underlying topography.</li>
+                        <li><strong>CPU MODE:</strong> Rotate the cam switch to alternate between 2P LOCAL and CPU operation.</li>
+                    </ul>
+                </div>
+
+                <div id="help-page-2" class="help-page">
+                    <h2>> SYS_MANUAL: TACTICAL PHYSICS</h2>
+                    <ul>
+                        <li><strong>LOW FREQ (1-3):</strong> Broad kinetic tidal surges. These waves carry massive momentum and excel at pushing back enemy fronts from a safe distance.</li>
+                        <li><strong>HIGH FREQ (7-9):</strong> High-density standing waves. Fast energy output makes these optimal for point-defense, securing peaks, and point-blank signal jamming.</li>
+                        <li><strong>TOPOGRAPHY:</strong> Elevation is critical. Hardware dropped on high ridges receives massive amplitude multipliers. Deep trenches choke signal momentum.</li>
+                    </ul>
+                </div>
+
+                <div class="blink-container">
+                    <span id="help-blink-text" class="blink-text">> CLICK TO PROCEED (1/3) <</span>
+                </div>
+            </div>
+
+            <canvas id="gameCanvas" width="960" height="540"></canvas>
+        </div>
+        
+        <div id="scoreBoard">
+            <div id="barBlue"></div>
+            <div id="barNeutral"></div>
+            <div id="barAmber"></div>
+            
+            <div id="meterScale">
+                <div class="meter-tick" style="left: 25%;"></div>
+                <span class="meter-label" style="left: 25%;">25%</span>
+                
+                <div class="meter-crit-tick" style="left: 45%;"></div>
+                <span class="meter-crit-label" style="left: 45%;">CRIT</span>
+                
+                <div class="meter-tick" style="left: 50%; height: 12px; background: rgba(255,255,255,0.7);"></div>
+                <span class="meter-label" style="left: 50%;">50%</span>
+                
+                <div class="meter-crit-tick" style="left: 55%;"></div>
+                <span class="meter-crit-label" style="left: 55%;">CRIT</span>
+
+                <div class="meter-tick" style="left: 75%;"></div>
+                <span class="meter-label" style="left: 75%;">75%</span>
+            </div>
+        </div>
+    </div>
+
+<script>
+    let audioCtx = null;
+    let audioEnabled = false;
+    let helpEnabled = true; 
+    let currentHelpPage = 0;
+    const totalHelpPages = 3;
+    const PHI = 1.61803398875;
+    
+    let synthGain = null; 
+    let sfxGain = null;   
+    
+    let masterFilter = null;
+    let masterCompressor = null;
+    
+    let synthVoices = { 0: {}, 1: {} };
+    let synthInitialized = false;
+
+    function ensureAudioInit() {
+        if (!audioCtx) {
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            
+            sfxGain = audioCtx.createGain();
+            sfxGain.gain.setValueAtTime(0.85, audioCtx.currentTime);
+            sfxGain.connect(audioCtx.destination);
+            
+            synthGain = audioCtx.createGain();
+            synthGain.gain.setValueAtTime(0.0001, audioCtx.currentTime);
+            synthGain.connect(audioCtx.destination);
+
+            masterFilter = audioCtx.createBiquadFilter();
+            masterFilter.type = 'lowpass';
+            masterFilter.frequency.setValueAtTime(1200, audioCtx.currentTime);
+            masterFilter.Q.setValueAtTime(3.0, audioCtx.currentTime);
+            
+            masterCompressor = audioCtx.createDynamicsCompressor();
+            masterCompressor.threshold.setValueAtTime(-24, audioCtx.currentTime);
+            masterCompressor.knee.setValueAtTime(30, audioCtx.currentTime);
+            masterCompressor.ratio.setValueAtTime(12, audioCtx.currentTime);
+            masterCompressor.attack.setValueAtTime(0.003, audioCtx.currentTime);
+            masterCompressor.release.setValueAtTime(0.25, audioCtx.currentTime);
+
+            masterFilter.connect(masterCompressor);
+            masterCompressor.connect(synthGain);
+            
+            initGlobalSynth();
+        }
+        if (audioCtx.state === 'suspended') {
+            audioCtx.resume();
+        }
+    }
+
+    let isHardwarePressed = false;
+
+    function hardwareClick() {
+        ensureAudioInit();
+        if (isHardwarePressed) return;
+        isHardwarePressed = true;
+        
+        if (navigator.vibrate) navigator.vibrate(10);
+        
+        let now = audioCtx.currentTime;
+        let osc = audioCtx.createOscillator();
+        let gain = audioCtx.createGain();
+        let filter = audioCtx.createBiquadFilter();
+        
+        osc.type = 'square';
+        osc.frequency.setValueAtTime(300, now);
+        osc.frequency.exponentialRampToValueAtTime(30, now + 0.03); 
+        
+        filter.type = 'lowpass';
+        filter.frequency.setValueAtTime(1500, now);
+        filter.frequency.linearRampToValueAtTime(100, now + 0.03);
+        
+        gain.gain.setValueAtTime(0.4, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.03);
+        
+        osc.connect(filter);
+        filter.connect(gain);
+        gain.connect(sfxGain); 
+        
+        osc.start(now);
+        osc.stop(now + 0.04);
+    }
+
+    function hardwareRelease() {
+        if (!isHardwarePressed) return;
+        isHardwarePressed = false;
+        
+        if (navigator.vibrate) navigator.vibrate(5);
+        
+        let now = audioCtx.currentTime;
+        let osc = audioCtx.createOscillator();
+        let gain = audioCtx.createGain();
+        
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(800, now);
+        osc.frequency.exponentialRampToValueAtTime(150, now + 0.02); 
+        
+        gain.gain.setValueAtTime(0.15, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.02);
+        
+        osc.connect(gain);
+        gain.connect(sfxGain); 
+        
+        osc.start(now);
+        osc.stop(now + 0.03);
+    }
+
+    function hardwareRotaryClick() {
+        ensureAudioInit();
+        if (navigator.vibrate) navigator.vibrate([15, 30, 15]);
+        let now = audioCtx.currentTime;
+
+        let oscLow = audioCtx.createOscillator();
+        let gainLow = audioCtx.createGain();
+        oscLow.type = 'triangle';
+        oscLow.frequency.setValueAtTime(220, now);
+        oscLow.frequency.exponentialRampToValueAtTime(18, now + 0.06);
+        gainLow.gain.setValueAtTime(0.85, now);
+        gainLow.gain.exponentialRampToValueAtTime(0.001, now + 0.06);
+
+        let oscDetent = audioCtx.createOscillator();
+        let gainDetent = audioCtx.createGain();
+        let filterDetent = audioCtx.createBiquadFilter();
+        oscDetent.type = 'square';
+        oscDetent.frequency.setValueAtTime(1100, now);
+        oscDetent.frequency.exponentialRampToValueAtTime(80, now + 0.04);
+        filterDetent.type = 'bandpass';
+        filterDetent.frequency.setValueAtTime(1400, now);
+        filterDetent.Q.setValueAtTime(2.0, now);
+        gainDetent.gain.setValueAtTime(0.45, now);
+        gainDetent.gain.exponentialRampToValueAtTime(0.001, now + 0.04);
+
+        oscLow.connect(gainLow);
+        gainLow.connect(sfxGain);
+        
+        oscDetent.connect(filterDetent);
+        filterDetent.connect(gainDetent);
+        gainDetent.connect(sfxGain);
+
+        oscLow.start(now); oscLow.stop(now + 0.07);
+        oscDetent.start(now); oscDetent.stop(now + 0.05);
+    }
+
+    function changeFreq(dir) {
+        let uiVal = parseInt(document.getElementById('freqVal').innerText) + dir;
+        if (uiVal < 1) uiVal = 1;
+        if (uiVal > 9) uiVal = 9;
+        
+        currentHarmonic = uiVal + 1; 
+        currentFreq = currentHarmonic * BASE_FREQ;
+        document.getElementById('freqVal').innerText = uiVal;
+    }
+
+    function toggleAudio() {
+        audioEnabled = !audioEnabled;
+        const btn = document.getElementById('audioToggleBtn');
+        
+        if (audioEnabled) {
+            btn.innerHTML = "<span>AUDIO</span><span>ON</span>";
+            btn.classList.add('active');
+            synthGain.gain.setTargetAtTime(1.0, audioCtx.currentTime, 0.1);
+        } else {
+            btn.innerHTML = "<span>AUDIO</span><span>OFF</span>";
+            btn.classList.remove('active');
+            synthGain.gain.setTargetAtTime(0.0001, audioCtx.currentTime, 0.1);
+        }
+    }
+
+    function advanceHelp() {
+        hardwareClick();
+        setTimeout(() => hardwareRelease(), 50); 
+        
+        const pages = document.querySelectorAll('.help-page');
+        const blinkText = document.getElementById('help-blink-text');
+        
+        pages[currentHelpPage].classList.remove('active');
+        currentHelpPage++;
+
+        if (currentHelpPage >= totalHelpPages) {
+            toggleHelp(false);
+        } else {
+            pages[currentHelpPage].classList.add('active');
+            if (currentHelpPage === totalHelpPages - 1) {
+                blinkText.innerText = `> CLICK TO COMMENCE INITIALIZATION <`;
+            } else {
+                blinkText.innerText = `> CLICK TO PROCEED (${currentHelpPage + 1}/${totalHelpPages}) <`;
+            }
+        }
+    }
+
+    function toggleHelp(forceState = null) {
+        if (forceState !== null) {
+            helpEnabled = forceState;
+        } else {
+            helpEnabled = !helpEnabled;
+        }
+        
+        const btn = document.getElementById('infoToggleBtn');
+        const overlay = document.getElementById('help-overlay');
+        const pages = document.querySelectorAll('.help-page');
+        const blinkText = document.getElementById('help-blink-text');
+        
+        if (helpEnabled) {
+            btn.innerHTML = "<span>INFO</span><span>ON</span>";
+            btn.classList.add('active');
+            overlay.classList.remove('hidden');
+            
+            pages.forEach(p => p.classList.remove('active'));
+            currentHelpPage = 0;
+            pages[0].classList.add('active');
+            blinkText.innerText = `> CLICK TO PROCEED (1/3) <`;
+            
+        } else {
+            btn.innerHTML = "<span>INFO</span><span>OFF</span>";
+            btn.classList.remove('active');
+            overlay.classList.add('hidden');
+        }
+    }
+
+    function initGlobalSynth() {
+        if (synthInitialized) return;
+        for (let p = 0; p <= 1; p++) {
+            for (let hUI = 1; hUI <= 9; hUI++) {
+                let internalHarmonic = hUI + 1;
+                synthVoices[p][hUI] = createGlobalVoice(p, internalHarmonic);
+            }
+        }
+        synthInitialized = true;
+    }
+
+    function createGlobalVoice(player, internalHarmonic) {
+        let baseFreq = player === 0 ? 110.0 : 146.83;
+        let fundamental = baseFreq * (internalHarmonic * 0.4);
+        let now = audioCtx.currentTime;
+
+        let multipliers = [1.0, PHI, PHI * PHI];
+        let gainNode = audioCtx.createGain();
+        gainNode.gain.setValueAtTime(0.0001, now); 
+
+        multipliers.forEach((mult, index) => {
+            let osc = audioCtx.createOscillator();
+            let subGain = audioCtx.createGain();
+
+            osc.type = index === 0 ? 'sine' : 'triangle';
+            let freq = fundamental * mult;
+            if (freq > 3500) freq = 3500;
+            osc.frequency.setValueAtTime(freq, now);
+
+            let baseSubGain = index === 0 ? 0.04 : (index === 1 ? 0.025 : 0.012);
+            subGain.gain.setValueAtTime(baseSubGain, now);
+
+            osc.connect(subGain);
+            subGain.connect(gainNode);
+            osc.start(now);
+        });
+
+        gainNode.connect(masterFilter); 
+
+        return {
+            setTerritoryPower: function(totalTerritoryPower) {
+                if (!audioCtx || !audioEnabled) return;
+                let tNow = audioCtx.currentTime;
+                let targetVol = Math.max(0.0001, Math.min(0.18, totalTerritoryPower * 0.035));
+                gainNode.gain.setTargetAtTime(targetVol, tNow, 0.3); 
+            },
+            fadeOut: function(fadeDuration = 0.8) {
+                if (!audioCtx) return;
+                let stopTime = audioCtx.currentTime;
+                gainNode.gain.linearRampToValueAtTime(0.0001, stopTime + fadeDuration);
+            },
+            triumph: function() {
+                if (!audioCtx) return;
+                let tNow = audioCtx.currentTime;
+                gainNode.gain.setTargetAtTime(0.25, tNow, 0.5);
+            },
+            forceSilence: function() {
+                if (!audioCtx) return;
+                gainNode.gain.setTargetAtTime(0.0001, audioCtx.currentTime, 0.05);
+            }
+        };
+    }
+
+    function playTransientStrike(player, internalHarmonic) {
+        ensureAudioInit(); 
+        
+        let baseFreq = player === 0 ? 110.0 : 146.83;
+        let fundamental = baseFreq * (internalHarmonic * 0.4);
+        let now = audioCtx.currentTime;
+
+        let multipliers = [1.0, PHI, PHI * PHI];
+        let strikeGain = audioCtx.createGain();
+        let strikeFilter = audioCtx.createBiquadFilter();
+
+        strikeFilter.type = 'lowpass';
+        strikeFilter.frequency.setValueAtTime(1500, now);
+
+        strikeGain.gain.setValueAtTime(0.001, now);
+        strikeGain.gain.linearRampToValueAtTime(0.15, now + 0.05);
+        strikeGain.gain.exponentialRampToValueAtTime(0.0001, now + 1.2);
+
+        multipliers.forEach((mult, index) => {
+            let osc = audioCtx.createOscillator();
+            let subGain = audioCtx.createGain();
+
+            osc.type = index === 0 ? 'sine' : 'triangle';
+            let freq = fundamental * mult;
+            if (freq > 3500) freq = 3500;
+            osc.frequency.setValueAtTime(freq, now);
+
+            let baseSubGain = index === 0 ? 0.06 : (index === 1 ? 0.03 : 0.015);
+            subGain.gain.setValueAtTime(baseSubGain, now);
+
+            osc.connect(subGain);
+            subGain.connect(strikeGain);
+            osc.start(now);
+            osc.stop(now + 1.3); 
+        });
+
+        strikeGain.connect(strikeFilter);
+        strikeFilter.connect(sfxGain); 
+    }
+
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    const turnIndicator = document.getElementById('turn-indicator');
+    const terrainToggleBtn = document.getElementById('terrainToggleBtn');
+    
+    const barBlue = document.getElementById('barBlue');
+    const barNeutral = document.getElementById('barNeutral');
+    const barAmber = document.getElementById('barAmber');
+    
+    let activeColor = 0; 
+    let peekTerrain = false;
+    let vsCpu = false;
+    let isCpuThinking = false;
+    
+    let simulationActive = false; 
+    
+    const BASE_FREQ = 0.08;
+    const EXCLUSION_RADIUS = 15; 
+    const MAX_DROPS = 64; 
+
+    let p1Drops = MAX_DROPS;
+    let p2Drops = MAX_DROPS;
+
+    let currentP1Pct = 0; 
+    let currentP2Pct = 0;
+
+    let currentHarmonic = 3; 
+    let currentFreq = currentHarmonic * BASE_FREQ;
+    
+    let gameOver = false;
+    let dominatingPlayer = -1;
+    let dropsRemaining = 0;
+    let evaluatingWin = false;
+    let evalTimer = 0;
+    const SETTLE_FRAMES = 420; 
+    
+    const WIN_THRESHOLD = 55;
+
+    let mouseX = -100;
+    let mouseY = -100;
+    let isHovering = false;
+
+    function getAmplitude(harmonic) {
+        if (harmonic === 2) return 5000;  
+        if (harmonic === 3) return 3000;  
+        return 8000 / harmonic;           
+    }
+
+    const simW = 960;
+    const simH = 540;
+    const bufferSize = simW * simH;
+
+    canvas.addEventListener('mousemove', (e) => {
+        const rect = canvas.getBoundingClientRect();
+        const scaleX = simW / rect.width;
+        const scaleY = simH / rect.height;
+        mouseX = (e.clientX - rect.left) * scaleX;
+        mouseY = (e.clientY - rect.top) * scaleY;
+    });
+
+    canvas.addEventListener('mouseenter', () => isHovering = true);
+    canvas.addEventListener('mouseleave', () => isHovering = false);
+
+    function toggleTerrainPeek() {
+        peekTerrain = !peekTerrain;
+        if (peekTerrain) {
+            terrainToggleBtn.innerHTML = "<span>PEEK</span><span>ON</span>";
+            terrainToggleBtn.classList.add('active');
+        } else {
+            terrainToggleBtn.innerHTML = "<span>PEEK</span><span>OFF</span>";
+            terrainToggleBtn.classList.remove('active');
+        }
+    }
+
+    function toggleGameMode() {
+        vsCpu = !vsCpu;
+        const pointer = document.getElementById('cam-pointer');
+        
+        if (vsCpu) {
+            pointer.classList.remove('pos-left');
+            pointer.classList.add('pos-right');
+        } else {
+            pointer.classList.remove('pos-right');
+            pointer.classList.add('pos-left');
+        }
+        resetGame();
+    }
+
+    function resetGame() {
+        if (synthInitialized) {
+            for (let p = 0; p <= 1; p++) {
+                for (let hUI = 1; hUI <= 9; hUI++) {
+                    synthVoices[p][hUI].forceSilence();
+                }
+            }
+        }
+        
+        nodes = [];
+        ripples = [];
+        gameOver = false;
+        simulationActive = false; 
+        dominatingPlayer = -1;
+        evaluatingWin = false;
+        evalTimer = 0;
+        activeColor = 0;
+        
+        p1Drops = MAX_DROPS;
+        p2Drops = MAX_DROPS;
+        currentP1Pct = 0;
+        currentP2Pct = 0;
+        
+        turnIndicator.innerText = `> CH 1 (ULTRAMARINE) ACTIVE - ${p1Drops} DROPS LEFT`;
+        turnIndicator.style.color = "var(--ultramarine)";
+        generateTerrain();
+        
+        for (let i = 0; i < bufferSize; i++) {
+            zOld[0][i] = 0; z[0][i] = 0; zNew[0][i] = 0; E[0][i] = 0; E_smooth[0][i] = 0;
+            zOld[1][i] = 0; z[1][i] = 0; zNew[1][i] = 0; E[1][i] = 0; E_smooth[1][i] = 0;
+        }
+    }
+    
+    let zOld = [new Float32Array(bufferSize), new Float32Array(bufferSize)];
+    let z = [new Float32Array(bufferSize), new Float32Array(bufferSize)];
+    let zNew = [new Float32Array(bufferSize), new Float32Array(bufferSize)];
+    let E = [new Float32Array(bufferSize), new Float32Array(bufferSize)];
+    let E_smooth = [new Float32Array(bufferSize), new Float32Array(bufferSize)]; 
+    
+    let terrainSpeed = new Float32Array(bufferSize); 
+    let terrainHeight = new Uint8Array(bufferSize);
+    let terrainLight = new Int8Array(bufferSize);
+    let terrainDamping = new Float32Array(bufferSize); 
+    
+    let edgeDamping = new Float32Array(bufferSize);
+    let vignetteMap = new Float32Array(bufferSize);
+
+    function generateTerrain() {
+        const tCan = document.createElement('canvas');
+        tCan.width = 80; 
+        tCan.height = 45;
+        const tCtx = tCan.getContext('2d');
+        const img = tCtx.createImageData(80, 45);
+        for (let i = 0; i < img.data.length; i += 4) {
+            let val = Math.random() * 255;
+            img.data[i] = val; img.data[i+1] = val; img.data[i+2] = val; img.data[i+3] = 255;
+        }
+        tCtx.putImageData(img, 0, 0);
+
+        const mCan = document.createElement('canvas');
+        mCan.width = simW; mCan.height = simH;
+        const mCtx = mCan.getContext('2d');
+        mCtx.filter = 'blur(18px)';
+        mCtx.imageSmoothingEnabled = true;
+        mCtx.drawImage(tCan, 0, 0, simW, simH);
+
+        const mData = mCtx.getImageData(0, 0, simW, simH).data;
+        
+        for (let y = 0; y < simH; y++) {
+            for (let x = 0; x < simW; x++) {
+                let i = x + y * simW;
+                
+                let edgeDistX = Math.min(x, simW - 1 - x);
+                let edgeDistY = Math.min(y, simH - 1 - y);
+                let edgeDist = Math.min(edgeDistX, edgeDistY);
+                
+                if (edgeDist < 35) {
+                    edgeDamping[i] = 0.85 + (0.15 * (edgeDist / 35)); 
+                } else {
+                    edgeDamping[i] = 1.0;
+                }
+
+                if (edgeDist < 60) {
+                    vignetteMap[i] = Math.pow(edgeDist / 60, 0.8);
+                } else {
+                    vignetteMap[i] = 1.0;
+                }
+
+                let raw = mData[i * 4]; 
+                let normalizedRaw = raw / 255;
+                
+                let curve = normalizedRaw < 0.5 
+                    ? 2 * normalizedRaw * normalizedRaw 
+                    : 1 - Math.pow(-2 * normalizedRaw + 2, 2) / 2;
+                
+                let h = curve * 255;
+                let normalized = h / 255;
+                
+                terrainSpeed[i] = 0.10 + (normalized * 0.40); 
+                terrainDamping[i] = 0.989 + (normalized * 0.010);
+                terrainHeight[i] = h;
+            }
+        }
+
+        for (let y = 0; y < simH; y++) {
+            for (let x = 0; x < simW; x++) {
+                let i = x + y * simW;
+                let h = terrainHeight[i];
+                if (x > 0 && y > 0) {
+                    let hLeft = terrainHeight[i - 1];
+                    let hTop = terrainHeight[i - simW];
+                    let slope = (h - hLeft) + (h - hTop);
+                    let isContour = (h % 30 <= 2) ? 15 : 0;
+                    terrainLight[i] = Math.max(-128, Math.min(127, (slope * 3.5) + isContour)); 
+                } else {
+                    terrainLight[i] = 0;
+                }
+            }
+        }
+    }
+    generateTerrain();
+    
+    let nodes = [];
+    let ripples = []; 
+    let time = 0;
+
+    canvas.addEventListener('mousedown', (e) => {
+        if (gameOver || evaluatingWin || helpEnabled || (vsCpu && activeColor === 1 && isCpuThinking)) return; 
+        
+        if (activeColor === 0 && p1Drops <= 0) return;
+        if (activeColor === 1 && p2Drops <= 0) return;
+        
+        if (mouseX >= 0 && mouseX < simW && mouseY >= 0 && mouseY < simH) {
+            
+            let isValidPlacement = true;
+            for (let n of nodes) {
+                if (Math.hypot(n.x - mouseX, n.y - mouseY) < EXCLUSION_RADIUS) {
+                    isValidPlacement = false;
+                    break;
+                }
+            }
+
+            if (isValidPlacement) {
+                executePlayerMove(mouseX, mouseY, activeColor, currentHarmonic);
+            }
+        }
+    });
+
+    function executePlayerMove(x, y, player, harmonic) {
+        if (player === 0) p1Drops--;
+        else p2Drops--;
+
+        let uiHarmonic = harmonic - 1;
+        let freq = harmonic * BASE_FREQ;
+        let newNode = { x, y, player: player, freq: freq, harmonic: harmonic, uiHarmonic: uiHarmonic };
+        nodes.push(newNode);
+        
+        if (dominatingPlayer !== -1 && player !== dominatingPlayer) {
+            dropsRemaining--;
+        }
+
+        let initAmplitude = getAmplitude(harmonic);
+        
+        playTransientStrike(player, harmonic);
+
+        if (nodes.length === 2 && !simulationActive) {
+            simulationActive = true;
+            nodes.forEach(n => {
+                ripples.push({ x: n.x, y: n.y, radius: 2, maxRadius: 28, player: n.player, opacity: 1.0 });
+                z[n.player][Math.floor(n.x) + Math.floor(n.y) * simW] = getAmplitude(n.harmonic); 
+            });
+        } else if (simulationActive) {
+            ripples.push({ x, y, radius: 2, maxRadius: 28, player: player, opacity: 1.0 });
+            z[player][Math.floor(x) + Math.floor(y) * simW] = initAmplitude; 
+        }
+
+        activeColor = activeColor === 0 ? 1 : 0;
+        
+        if (!evaluatingWin && !gameOver) {
+            if (activeColor === 0) {
+                turnIndicator.innerText = `> CH 1 (ULTRAMARINE) ACTIVE - ${p1Drops} DROPS LEFT`;
+                turnIndicator.style.color = "var(--ultramarine)";
+            } else {
+                turnIndicator.innerText = `> CH 2 (AMBER) ACTIVE - ${p2Drops} DROPS LEFT`;
+                turnIndicator.style.color = "var(--amber)";
+            }
+        }
+
+        if (vsCpu && activeColor === 1 && p2Drops > 0 && !gameOver && !evaluatingWin) {
+            triggerCpuTurn();
+        }
+    }
+
+    function triggerCpuTurn() {
+        isCpuThinking = true;
+        turnIndicator.innerText = "> CH 2 (AMBER) COMPUTING...";
+        turnIndicator.style.color = "var(--amber)";
+
+        setTimeout(() => {
+            if (gameOver || evaluatingWin || p2Drops <= 0) {
+                isCpuThinking = false;
+                return;
+            }
+
+            let bestX = Math.floor(simW / 2);
+            let bestY = Math.floor(simH / 2);
+            let bestScore = -999999;
+            
+            let strategy = "EXPAND";
+            
+            if (currentP1Pct > 45) {
+                strategy = "JAM"; 
+            } else if (currentP2Pct > 45) {
+                strategy = Math.random() > 0.3 ? "EXPAND" : "JAM"; 
+            } else {
+                let roll = Math.random();
+                if (currentP1Pct > currentP2Pct) {
+                    if (roll < 0.5) strategy = "ATTACK";
+                    else if (roll < 0.8) strategy = "JAM";
+                    else strategy = "EXPAND";
+                } else {
+                    if (roll < 0.5) strategy = "EXPAND";
+                    else if (roll < 0.8) strategy = "ATTACK";
+                    else strategy = "JAM";
+                }
+            }
+
+            for (let attempt = 0; attempt < 500; attempt++) {
+                let rx = Math.floor(25 + Math.random() * (simW - 50));
+                let ry = Math.floor(25 + Math.random() * (simH - 50));
+                
+                let validSpot = true;
+                for (let n of nodes) {
+                    if (Math.hypot(n.x - rx, n.y - ry) < EXCLUSION_RADIUS) {
+                        validSpot = false;
+                        break;
+                    }
+                }
+                if (!validSpot) continue;
+
+                let rIdx = rx + ry * simW;
+                let elevation = terrainHeight[rIdx] / 255.0; 
+                let enemyEnergy = E_smooth[0][rIdx]; 
+                let myEnergy = E_smooth[1][rIdx]; 
+                
+                let score = 0;
+                if (strategy === "ATTACK") {
+                    score = (elevation * 10000) + (enemyEnergy * 1.5) - myEnergy;
+                } else if (strategy === "JAM") {
+                    score = enemyEnergy; 
+                } else { 
+                    score = (elevation * 15000) - (enemyEnergy * 3.0) - myEnergy;
+                }
+
+                if (score > bestScore) {
+                    bestScore = score;
+                    bestX = rx;
+                    bestY = ry;
+                }
+            }
+
+            let cpuHarmonic = Math.floor(2 + Math.random() * 8); 
+
+            executePlayerMove(bestX, bestY, 1, cpuHarmonic);
+            isCpuThinking = false;
+        }, 1000); 
+    }
+
+    function update() {
+        if (gameOver) return;
+
+        let harmonicPowerAccumulator = {
+            0: {1:0, 2:0, 3:0, 4:0, 5:0, 6:0, 7:0, 8:0, 9:0},
+            1: {1:0, 2:0, 3:0, 4:0, 5:0, 6:0, 7:0, 8:0, 9:0}
+        };
+
+        if (simulationActive && !helpEnabled) { 
+            time += 1;
+
+            for (let node of nodes) {
+                let idx = Math.floor(node.x) + Math.floor(node.y) * simW;
+                let balancedAmplitude = getAmplitude(node.harmonic); 
+                
+                let elevation = terrainHeight[idx] / 255; 
+                let elevationMultiplier = 0.5 + (Math.pow(elevation, 2) * 3.5); 
+                
+                let force = Math.sin(time * node.freq) * balancedAmplitude * elevationMultiplier; 
+                z[node.player][idx] = force;
+            }
+
+            for (let y = 1; y < simH - 1; y++) {
+                for (let x = 1; x < simW - 1; x++) {
+                    let i = x + y * simW;
+                    
+                    let e0 = E[0][i], e1 = E[1][i];
+                    let alpha = terrainSpeed[i]; 
+
+                    for (let c = 0; c < 2; c++) {
+                        let currentZ = z[c][i];
+                        let laplacian = (z[c][i - 1] + z[c][i + 1] + z[c][i - simW] + z[c][i + simW] - 4 * currentZ);
+                        let val = 2 * currentZ - zOld[c][i] + alpha * laplacian;
+                        
+                        let enemyEnergy = (c === 0) ? e1 : e0;
+                        let combatDamping = Math.max(0.6, 0.992 - (enemyEnergy * 0.005));
+                        
+                        let envDamping = terrainDamping[i];
+                        
+                        zNew[c][i] = val * combatDamping * edgeDamping[i] * envDamping;
+                        E[c][i] = E[c][i] * 0.90 + Math.abs(z[c][i]) * 0.10;
+                    }
+                }
+            }
+
+            for(let c=0; c<2; c++) {
+                let temp = zOld[c]; zOld[c] = z[c]; z[c] = zNew[c]; zNew[c] = temp;
+            }
+
+            for (let y = 1; y < simH - 1; y++) {
+                for (let x = 1; x < simW - 1; x++) {
+                    let i = x + y * simW;
+                    for (let c = 0; c < 2; c++) {
+                        E_smooth[c][i] = (E[c][i] * 2 + E[c][i-1] + E[c][i+1] + E[c][i-simW] + E[c][i+simW]) / 6;
+                    }
+                }
+            }
+
+            if (synthInitialized) {
+                nodes.forEach(node => {
+                    let sampleRadius = 45; 
+                    let mineCount = 0;
+                    let totalSampled = 0;
+                    let nx = Math.floor(node.x);
+                    let ny = Math.floor(node.y);
+
+                    for (let dy = -sampleRadius; dy <= sampleRadius; dy += 5) {
+                        for (let dx = -sampleRadius; dx <= sampleRadius; dx += 5) {
+                            let sx = nx + dx;
+                            let sy = ny + dy;
+                            if (sx >= 0 && sx < simW && sy >= 0 && sy < simH) {
+                                if (Math.hypot(dx, dy) <= sampleRadius) {
+                                    let sIdx = sx + sy * simW;
+                                    let myEnergy = E_smooth[node.player][sIdx];
+                                    let oppEnergy = E_smooth[node.player === 0 ? 1 : 0][sIdx];
+                                    
+                                    totalSampled++;
+                                    if (myEnergy > oppEnergy + 5) mineCount++;
+                                }
+                            }
+                        }
+                    }
+
+                    let dominanceFactor = totalSampled > 0 ? (mineCount / totalSampled) * 2.0 : 0.0;
+                    harmonicPowerAccumulator[node.player][node.uiHarmonic] += dominanceFactor;
+                });
+                
+                for (let p = 0; p <= 1; p++) {
+                    for (let hUI = 1; hUI <= 9; hUI++) {
+                        let currentPower = harmonicPowerAccumulator[p][hUI];
+                        synthVoices[p][hUI].setTerritoryPower(currentPower);
+                    }
+                }
+            }
+        }
+
+        let imgData = ctx.createImageData(simW, simH);
+        let data = imgData.data;
+        
+        let p1Pixels = 0;
+        let p2Pixels = 0;
+
+        let waveOpacityMult = peekTerrain ? 0.04 : 0.45;
+        let rippleOpacityMult = peekTerrain ? 0.05 : 0.15;
+
+        for (let i = 0; i < bufferSize; i++) {
+            let idx = i * 4;
+            
+            let h = terrainHeight[i];
+            let light = terrainLight[i];
+            let vig = vignetteMap[i];
+            
+            let base = (h * 0.12) + light + 10;
+
+            let blueRaw = E_smooth[0][i]; 
+            let amberRaw = E_smooth[1][i]; 
+            
+            if (blueRaw > amberRaw + 10) p1Pixels++;
+            else if (amberRaw > blueRaw + 10) p2Pixels++;
+
+            let blueVis = blueRaw * waveOpacityMult;
+            let amberVis = amberRaw * waveOpacityMult; 
+
+            let rawWave = (z[0][i] - z[1][i]) * rippleOpacityMult; 
+            let highlight = Math.max(0, rawWave);
+            let shadow = Math.max(0, -rawWave);
+
+            let rOut = base + amberVis + highlight - shadow;                     
+            let gOut = base + (blueVis * 0.5) + (amberVis * 0.65) + highlight - shadow; 
+            let bOut = base + (blueVis * 1.3) + highlight - shadow;              
+
+            data[idx] = Math.max(0, Math.min(255, rOut * vig));             
+            data[idx + 1] = Math.max(0, Math.min(255, gOut * vig)); 
+            data[idx + 2] = Math.max(0, Math.min(255, bOut * vig));         
+            data[idx + 3] = 255; 
+        }
+        ctx.putImageData(imgData, 0, 0);
+
+        if (!helpEnabled) {
+            for (let r = ripples.length - 1; r >= 0; r--) {
+                let rip = ripples[r];
+                rip.radius += 1.2;
+                rip.opacity -= 0.04;
+
+                if (rip.opacity <= 0) {
+                    ripples.splice(r, 1);
+                    continue;
+                }
+
+                if (!peekTerrain) {
+                    ctx.beginPath();
+                    ctx.arc(rip.x, rip.y, rip.radius, 0, Math.PI * 2);
+                    ctx.strokeStyle = rip.player === 0 ? 'rgba(59, 130, 246,' + rip.opacity + ')' : 'rgba(255, 176, 0,' + rip.opacity + ')';
+                    ctx.lineWidth = 1;
+                    ctx.stroke();
+                }
+            }
+        }
+
+        let p1Pct = (p1Pixels / bufferSize) * 100;
+        let p2Pct = (p2Pixels / bufferSize) * 100;
+        let neuPct = 100 - (p1Pct + p2Pct);
+        
+        currentP1Pct = p1Pct;
+        currentP2Pct = p2Pct;
+
+        barBlue.style.width = p1Pct + "%";
+        barAmber.style.width = p2Pct + "%";
+        barNeutral.style.width = neuPct + "%";
+
+        let triggerFinalAnalysis = false;
+
+        if (simulationActive && dominatingPlayer === -1) {
+            if (p1Pct >= WIN_THRESHOLD) {
+                dominatingPlayer = 0;
+                dropsRemaining = 3; 
+            } else if (p2Pct >= WIN_THRESHOLD) {
+                dominatingPlayer = 1;
+                dropsRemaining = 3; 
+            }
+        } else if (simulationActive) {
+            if (dominatingPlayer === 0 && p1Pct < WIN_THRESHOLD) {
+                dominatingPlayer = -1;
+            } else if (dominatingPlayer === 1 && p2Pct < WIN_THRESHOLD) {
+                dominatingPlayer = -1;
+            }
+        }
+
+        if (dominatingPlayer !== -1 && dropsRemaining <= 0 && !evaluatingWin) {
+            triggerFinalAnalysis = true;
+        }
+        
+        if (p1Drops <= 0 && p2Drops <= 0 && !evaluatingWin) {
+            triggerFinalAnalysis = true;
+        }
+
+        if (triggerFinalAnalysis) {
+            evaluatingWin = true;
+            evalTimer = 0;
+            
+            let currentLeader = p1Pct > p2Pct ? 0 : 1;
+            if (synthInitialized) {
+                for (let hUI = 1; hUI <= 9; hUI++) {
+                    synthVoices[currentLeader][hUI].triumph();
+                    synthVoices[currentLeader === 0 ? 1 : 0][hUI].fadeOut(0.4);
+                }
+            }
+        }
+
+        if (evaluatingWin) {
+            evalTimer++;
+            if (evalTimer > SETTLE_FRAMES) { 
+                gameOver = true;
+                if (synthInitialized) {
+                    for (let p = 0; p <= 1; p++) {
+                        for (let hUI = 1; hUI <= 9; hUI++) {
+                            synthVoices[p][hUI].fadeOut(2.0);
+                        }
+                    }
+                }
+            }
+        }
+
+        if (!simulationActive) {
+            if (nodes.length === 0) {
+                turnIndicator.innerText = "> INITIALIZE: CH 1 DEPLOYMENT";
+                turnIndicator.style.color = "var(--ultramarine)";
+            } else if (nodes.length === 1) {
+                turnIndicator.innerText = "> INITIALIZE: CH 2 DEPLOYMENT";
+                turnIndicator.style.color = "var(--amber)";
+            }
+        } else if (gameOver) {
+            let finalWinner = p1Pct > p2Pct ? 0 : 1;
+            let winnerColor = finalWinner === 0 ? "CH 1" : "CH 2";
+            let colorHex = finalWinner === 0 ? "var(--ultramarine)" : "var(--amber)";
+            turnIndicator.style.color = colorHex;
+            turnIndicator.innerText = `[ SYSTEM ASSIMILATED BY ${winnerColor} ]`;
+        } else if (evaluatingWin) {
+            let currentLeader = p1Pct > p2Pct ? 0 : 1;
+            let colorHex = currentLeader === 0 ? "var(--ultramarine)" : "var(--amber)";
+            let timeLeft = ((SETTLE_FRAMES - evalTimer) / 60).toFixed(1);
+            turnIndicator.style.color = colorHex;
+            turnIndicator.innerText = `ANALYZING FINAL WAVEFRONT... ${timeLeft}s`;
+        } else if (dominatingPlayer !== -1) {
+            let domColor = dominatingPlayer === 0 ? "CH 1" : "CH 2";
+            let colorHex = dominatingPlayer === 0 ? "var(--ultramarine)" : "var(--amber)";
+            turnIndicator.style.color = colorHex;
+            turnIndicator.innerText = `! ${domColor} RESONANCE CRITICAL ! ${dropsRemaining} TURNS REMAINING`;
+        }
+
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.font = "bold 11px 'Courier New'";
+
+        for (let node of nodes) {
+            let displayChar = node.uiHarmonic.toString();
+            
+            ctx.fillStyle = "#000000";
+            ctx.fillText(displayChar, node.x + 1, node.y + 1);
+            
+            ctx.fillStyle = node.player === 0 ? '#3b82f6' : '#ffb000';
+            ctx.fillText(displayChar, node.x, node.y);
+        }
+
+        if (isHovering && !gameOver && !evaluatingWin && !helpEnabled && !(vsCpu && activeColor === 1 && isCpuThinking)) {
+            
+            let isValidPlacement = true;
+            for (let n of nodes) {
+                if (Math.hypot(n.x - mouseX, n.y - mouseY) < EXCLUSION_RADIUS) {
+                    isValidPlacement = false;
+                    break;
+                }
+            }
+
+            let ringSpacing = 45.0 / currentHarmonic;
+            
+            ctx.lineWidth = 1;
+            
+            let colorR = activeColor === 0 ? 59 : 255;
+            let colorG = activeColor === 0 ? 130 : 176;
+            let colorB = activeColor === 0 ? 246 : 0;
+            
+            if (!isValidPlacement) {
+                colorR = 255; colorG = 68; colorB = 68; 
+            }
+            
+            for (let i = 1; i <= 6; i++) {
+                let r = ringSpacing * i;
+                ctx.beginPath();
+                ctx.arc(mouseX, mouseY, r, 0, Math.PI * 2);
+                let alpha = 0.5 - (i * 0.07);
+                ctx.strokeStyle = `rgba(${colorR}, ${colorG}, ${colorB}, ${alpha})`;
+                ctx.stroke();
+            }
+            
+            ctx.beginPath();
+            if (isValidPlacement) {
+                ctx.strokeStyle = activeColor === 0 ? '#3b82f6' : '#ffb000';
+                ctx.moveTo(mouseX - 6, mouseY);
+                ctx.lineTo(mouseX + 6, mouseY);
+                ctx.moveTo(mouseX, mouseY - 6);
+                ctx.lineTo(mouseX, mouseY + 6);
+            } else {
+                ctx.strokeStyle = 'var(--error-red)';
+                ctx.moveTo(mouseX - 5, mouseY - 5);
+                ctx.lineTo(mouseX + 5, mouseY + 5);
+                ctx.moveTo(mouseX + 5, mouseY - 5);
+                ctx.lineTo(mouseX - 5, mouseY + 5);
+            }
+            ctx.stroke();
+
+            let hIdx = Math.floor(mouseX) + Math.floor(mouseY) * simW;
+            if (hIdx >= 0 && hIdx < bufferSize) {
+                ctx.textAlign = "left";
+                ctx.textBaseline = "bottom";
+                ctx.font = "bold 10px 'Courier New'";
+                
+                ctx.fillStyle = "#000000";
+                
+                if (isValidPlacement) {
+                    let hElev = terrainHeight[hIdx] / 255.0;
+                    let powerMultiplier = 0.5 + (Math.pow(hElev, 2) * 3.5);
+                    ctx.fillText(`AMP:${powerMultiplier.toFixed(1)}x`, mouseX + 9, mouseY - 7);
+                    ctx.fillStyle = activeColor === 0 ? '#3b82f6' : '#ffb000';
+                    ctx.fillText(`AMP:${powerMultiplier.toFixed(1)}x`, mouseX + 8, mouseY - 8);
+                } else {
+                    ctx.fillText(`[BLOCKED]`, mouseX + 9, mouseY - 7);
+                    ctx.fillStyle = 'var(--error-red)';
+                    ctx.fillText(`[BLOCKED]`, mouseX + 8, mouseY - 8);
+                }
+            }
+        }
+
+        if (!gameOver) requestAnimationFrame(update);
+    }
+
+    update();
+</script>
+</body>
+</html>
