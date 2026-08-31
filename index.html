@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Spore / Ink - Tactical Acoustics Engine</title>
     <style>
         :root {
@@ -38,7 +38,7 @@
             border-left: 2px solid #555;
             border-radius: 4px;
             box-shadow: 0 0 40px rgba(0, 0, 0, 1), 10px 10px 20px rgba(0,0,0,0.8);
-            cursor: crosshair; /* Fallback native tactical cursor */
+            cursor: none;
             transform-origin: top center;
         }
         
@@ -117,10 +117,10 @@
             display: block;
             image-rendering: pixelated; 
             border: none;
-            cursor: crosshair; /* Fallback native tactical cursor */
+            cursor: none; 
             position: relative;
             z-index: 1;
-            touch-action: none; 
+            touch-action: none; /* Prevents mobile browser pull-to-refresh */
         }
 
         /* --- MULTI-PAGE TACTICAL OVERLAY --- */
@@ -572,15 +572,15 @@
                     <ul>
                         <li><strong>CONCEPT:</strong> Welcome to the Acoustic Bathymetry Simulator. Your directive is to dominate the topographical grid using kinetic wave resonance.</li>
                         <li><strong>VICTORY (ATTRITION):</strong> Both operators possess exactly 64 hardware drops. Exhaust the payload and hold <strong>>50%</strong> territory during the final analysis.</li>
-                        <li><strong>VICTORY (THE CRUCIBLE):</strong> Push your resonance past the <strong>55% CRIT threshold</strong> to trigger an immediate, irreversible system assimilation.</li>
+                        <li><strong>VICTORY (THE CRUCIBLE):</strong> Push your resonance past the <strong>55% CRIT threshold</strong> (marked on the meter) to trigger an immediate, irreversible system assimilation.</li>
                     </ul>
                 </div>
 
                 <div id="help-page-1" class="help-page">
                     <h2>> SYS_MANUAL: HARDWARE OP</h2>
                     <ul>
-                        <li><strong>DEPLOYMENT:</strong> On mobile, drag to acquire target coordinates and release to lock. Tap the screen again to confirm deployment. Use two fingers to drag the map.</li>
-                        <li><strong>OSC FREQ:</strong> Use the Switch, Keyboard (1-9, W/S), or Mouse Wheel to dial your output frequency at any point before initiating a drop.</li>
+                        <li><strong>DEPLOYMENT:</strong> Touch/click and drag to acquire target coordinates. Release to drop payload. Hardware cannot be placed within 15px of existing nodes (Red Zone crosshair).</li>
+                        <li><strong>OSC FREQ:</strong> Use the Rocker Switch to dial your output frequency (1-9) <em>before</em> initiating a drop sequence.</li>
                         <li><strong>PEEK:</strong> Toggle to strip away the wave simulation and analyze raw underlying topography.</li>
                         <li><strong>CPU MODE:</strong> Rotate the cam switch to alternate between 2P LOCAL and CPU operation.</li>
                     </ul>
@@ -628,10 +628,11 @@
     </div>
 
 <script>
+    // --- RESPONSIVE MOBILE SCALING ---
     function resizeUI() {
         const container = document.getElementById('game-container');
         const availableWidth = window.innerWidth - 20; 
-        const scale = Math.min(availableWidth / 1004, 1); 
+        const scale = Math.min(availableWidth / 1004, 1); // 960px content + borders/padding
         
         if (scale < 1) {
             container.style.transform = `scale(${scale})`;
@@ -643,7 +644,7 @@
     }
     window.addEventListener('resize', resizeUI);
     window.addEventListener('orientationchange', resizeUI);
-    resizeUI(); 
+    resizeUI(); // Initial call
 
     let audioCtx = null;
     let audioEnabled = false;
@@ -1009,12 +1010,6 @@
     let mouseY = -100;
     let isHovering = false;
     let isTargeting = false;
-    let touchLocked = false;
-    let touchStartX = 0;
-    let touchStartY = 0;
-    let isTwoFingerDrag = false;
-    let panStartX = 0;
-    let panStartY = 0;
 
     function getAmplitude(harmonic) {
         if (harmonic === 2) return 5000;  
@@ -1026,179 +1021,73 @@
     const simH = 540;
     const bufferSize = simW * simH;
 
-    function updateMousePos(clientX, clientY, isTouch) {
+    // --- NEW: DRAG-TO-TARGET INPUT SYSTEM ---
+    function updateMousePos(e) {
         const rect = canvas.getBoundingClientRect();
-        if (rect.width === 0 || rect.height === 0) return;
         const scaleX = simW / rect.width;
         const scaleY = simH / rect.height;
-        let adjustedY = clientY;
-        if (isTouch) adjustedY -= 60; 
-        mouseX = (clientX - rect.left) * scaleX;
-        mouseY = (adjustedY - rect.top) * scaleY;
+        
+        let isTouch = e.touches && e.touches.length > 0;
+        let clientX = isTouch ? e.touches[0].clientX : (e.clientX || 0);
+        let clientY = isTouch ? e.touches[0].clientY : (e.clientY || 0);
+        
+        // Fat Finger Offset: push the mobile targeting crosshair 60px ABOVE the thumb
+        if (isTouch) {
+            clientY -= 60; 
+        }
+        
+        if (e.type !== 'touchend') {
+            mouseX = (clientX - rect.left) * scaleX;
+            mouseY = (clientY - rect.top) * scaleY;
+        }
     }
 
-    // --- HOTKEYS & MOUSE WHEEL ---
-    canvas.addEventListener('wheel', (e) => {
+    function handleInputStart(e) {
         if (gameOver || evaluatingWin || helpEnabled || (vsCpu && activeColor === 1 && isCpuThinking)) return;
-        e.preventDefault(); 
-        hardwareClick();
-        if (e.deltaY < 0) changeFreq(1);
-        else if (e.deltaY > 0) changeFreq(-1);
-        setTimeout(hardwareRelease, 50);
-    }, {passive: false});
-
-    window.addEventListener('keydown', (e) => {
-        if (gameOver || evaluatingWin || helpEnabled || (vsCpu && activeColor === 1 && isCpuThinking)) return;
-        
-        if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W') {
-            hardwareClick();
-            changeFreq(1);
-            setTimeout(hardwareRelease, 50);
-        } else if (e.key === 'ArrowDown' || e.key === 's' || e.key === 'S') {
-            hardwareClick();
-            changeFreq(-1);
-            setTimeout(hardwareRelease, 50);
-        } else if (e.key >= '1' && e.key <= '9') {
-            let targetVal = parseInt(e.key);
-            let currentVal = parseInt(document.getElementById('freqVal').innerText);
-            let diff = targetVal - currentVal;
-            if (diff !== 0) {
-                hardwareClick();
-                changeFreq(diff);
-                setTimeout(hardwareRelease, 50);
-            }
-        }
-    });
-
-    // --- MOUSE INPUT (DESKTOP) ---
-    canvas.addEventListener('mousemove', (e) => {
-        if (touchLocked) return; 
-        isHovering = true;
-        updateMousePos(e.clientX, e.clientY, false);
-    });
-
-    canvas.addEventListener('mousedown', (e) => {
-        if (gameOver || evaluatingWin || helpEnabled || (vsCpu && activeColor === 1 && isCpuThinking)) return;
-        if (touchLocked) return; 
-        tryDrop(mouseX, mouseY);
-    });
-
-    canvas.addEventListener('mouseenter', () => { if(!touchLocked) isHovering = true; });
-    canvas.addEventListener('mouseleave', () => { if(!touchLocked) isHovering = false; });
-
-    // --- DRAG-LOCK-CONFIRM & 2-FINGER PAN INPUT (MOBILE) ---
-    canvas.addEventListener('touchstart', (e) => {
-        if (gameOver || evaluatingWin || helpEnabled || (vsCpu && activeColor === 1 && isCpuThinking)) return;
-        
-        if (e.touches.length >= 2) {
-            isTwoFingerDrag = true;
-            panStartX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
-            panStartY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
-            isTargeting = false;
-            touchLocked = false;
-            mouseX = -100; mouseY = -100;
-            return; 
-        }
-
-        e.preventDefault();
-        
-        let clientX = e.touches[0].clientX;
-        let clientY = e.touches[0].clientY;
-        touchStartX = clientX;
-        touchStartY = clientY;
-
-        if (!touchLocked) {
-            isTargeting = true;
-            updateMousePos(clientX, clientY, true);
-        }
-    }, {passive: false});
-
-    canvas.addEventListener('touchmove', (e) => {
-        if (gameOver || evaluatingWin || helpEnabled || (vsCpu && activeColor === 1 && isCpuThinking)) return;
-
-        if (e.touches.length >= 2) {
-            let currentX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
-            let currentY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
-            if (isTwoFingerDrag) {
-                window.scrollBy(panStartX - currentX, panStartY - currentY);
-            }
-            panStartX = currentX;
-            panStartY = currentY;
-            isTwoFingerDrag = true;
-            isTargeting = false;
-            touchLocked = false;
-            mouseX = -100; mouseY = -100;
-            return;
-        }
-
-        e.preventDefault();
-
-        if (isTwoFingerDrag) {
-            isTwoFingerDrag = false;
-            return;
-        }
-
-        let clientX = e.touches[0].clientX;
-        let clientY = e.touches[0].clientY;
-
-        if (touchLocked) {
-            let dist = Math.hypot(clientX - touchStartX, clientY - touchStartY);
-            if (dist > 15) {
-                touchLocked = false;
-                isTargeting = true;
-                updateMousePos(clientX, clientY, true);
-            }
-        } else if (isTargeting) {
-            updateMousePos(clientX, clientY, true);
-        }
-    }, {passive: false});
-
-    canvas.addEventListener('touchend', (e) => {
-        if (gameOver || evaluatingWin || helpEnabled || (vsCpu && activeColor === 1 && isCpuThinking)) return;
-        
-        if (isTwoFingerDrag) {
-            if (e.touches.length < 2) isTwoFingerDrag = false;
-            return;
-        }
-        
-        e.preventDefault(); 
-        
-        if (touchLocked) {
-            tryDrop(mouseX, mouseY);
-            touchLocked = false;
-            mouseX = -100; 
-            mouseY = -100; 
-        } else if (isTargeting) {
-            touchLocked = true;
-            isTargeting = false;
-            if (navigator.vibrate) navigator.vibrate(5); 
-        }
-    });
-
-    canvas.addEventListener('touchcancel', () => { 
-        isTargeting = false; 
-        touchLocked = false; 
-        isTwoFingerDrag = false;
-        mouseX = -100; mouseY = -100;
-    });
-
-    function tryDrop(x, y) {
         if (activeColor === 0 && p1Drops <= 0) return;
         if (activeColor === 1 && p2Drops <= 0) return;
         
-        if (x >= 0 && x < simW && y >= 0 && y < simH) {
-            let isValidPlacement = true;
-            for (let n of nodes) {
-                if (Math.hypot(n.x - x, n.y - y) < EXCLUSION_RADIUS) {
-                    isValidPlacement = false;
-                    break;
+        isTargeting = true;
+        isHovering = true;
+        updateMousePos(e);
+        
+        if (e.type === 'touchstart') e.preventDefault();
+    }
+
+    function handleInputMove(e) {
+        updateMousePos(e);
+        if (isTargeting && e.type === 'touchmove') e.preventDefault();
+    }
+
+    function handleInputEnd(e) {
+        if (isTargeting) {
+            isTargeting = false;
+            if (mouseX >= 0 && mouseX < simW && mouseY >= 0 && mouseY < simH) {
+                let isValidPlacement = true;
+                for (let n of nodes) {
+                    if (Math.hypot(n.x - mouseX, n.y - mouseY) < EXCLUSION_RADIUS) {
+                        isValidPlacement = false;
+                        break;
+                    }
+                }
+                if (isValidPlacement) {
+                    executePlayerMove(mouseX, mouseY, activeColor, currentHarmonic);
                 }
             }
-            if (isValidPlacement) {
-                executePlayerMove(x, y, activeColor, currentHarmonic);
-            }
+            if (e.type === 'touchend') isHovering = false; 
         }
     }
+
+    canvas.addEventListener('mousedown', handleInputStart);
+    canvas.addEventListener('mousemove', handleInputMove);
+    canvas.addEventListener('mouseup', handleInputEnd);
+    canvas.addEventListener('mouseleave', () => { isHovering = false; isTargeting = false; });
+    canvas.addEventListener('mouseenter', () => isHovering = true);
+
+    canvas.addEventListener('touchstart', handleInputStart, {passive: false});
+    canvas.addEventListener('touchmove', handleInputMove, {passive: false});
+    canvas.addEventListener('touchend', handleInputEnd);
+    canvas.addEventListener('touchcancel', () => { isHovering = false; isTargeting = false; });
 
     function toggleTerrainPeek() {
         peekTerrain = !peekTerrain;
@@ -1242,9 +1131,6 @@
         evaluatingWin = false;
         evalTimer = 0;
         activeColor = 0;
-        touchLocked = false;
-        isTargeting = false;
-        isTwoFingerDrag = false;
         
         p1Drops = MAX_DROPS;
         p2Drops = MAX_DROPS;
@@ -1349,6 +1235,10 @@
         }
     }
     generateTerrain();
+    
+    let nodes = [];
+    let ripples = []; 
+    let time = 0;
 
     function executePlayerMove(x, y, player, harmonic) {
         if (player === 0) p1Drops--;
@@ -1734,12 +1624,8 @@
             ctx.fillText(displayChar, node.x, node.y);
         }
 
-        let showCursor = (isHovering || isTargeting || touchLocked);
-        if (gameOver || evaluatingWin || helpEnabled || (vsCpu && activeColor === 1 && isCpuThinking)) {
-            showCursor = false;
-        }
-
-        if (showCursor) {
+        if (isTargeting && !gameOver && !evaluatingWin && !helpEnabled && !(vsCpu && activeColor === 1 && isCpuThinking)) {
+            
             let isValidPlacement = true;
             for (let n of nodes) {
                 if (Math.hypot(n.x - mouseX, n.y - mouseY) < EXCLUSION_RADIUS) {
@@ -1777,7 +1663,7 @@
                 ctx.moveTo(mouseX, mouseY - 6);
                 ctx.lineTo(mouseX, mouseY + 6);
             } else {
-                ctx.strokeStyle = '#ff4444'; 
+                ctx.strokeStyle = 'var(--error-red)';
                 ctx.moveTo(mouseX - 5, mouseY - 5);
                 ctx.lineTo(mouseX + 5, mouseY + 5);
                 ctx.moveTo(mouseX + 5, mouseY - 5);
@@ -1791,27 +1677,17 @@
                 ctx.textBaseline = "bottom";
                 ctx.font = "bold 10px 'Courier New'";
                 
+                ctx.fillStyle = "#000000";
+                
                 if (isValidPlacement) {
                     let hElev = terrainHeight[hIdx] / 255.0;
                     let powerMultiplier = 0.5 + (Math.pow(hElev, 2) * 3.5);
-                    ctx.fillStyle = "#000000";
                     ctx.fillText(`AMP:${powerMultiplier.toFixed(1)}x`, mouseX + 9, mouseY - 7);
                     ctx.fillStyle = activeColor === 0 ? '#3b82f6' : '#ffb000';
                     ctx.fillText(`AMP:${powerMultiplier.toFixed(1)}x`, mouseX + 8, mouseY - 8);
-                    
-                    if (touchLocked) {
-                        let blink = Math.floor(Date.now() / 400) % 2 === 0;
-                        if (blink) {
-                            ctx.fillStyle = "#000000";
-                            ctx.fillText(`[TAP TO DEPLOY]`, mouseX + 9, mouseY + 14);
-                            ctx.fillStyle = activeColor === 0 ? '#3b82f6' : '#ffb000';
-                            ctx.fillText(`[TAP TO DEPLOY]`, mouseX + 8, mouseY + 13);
-                        }
-                    }
                 } else {
-                    ctx.fillStyle = "#000000";
                     ctx.fillText(`[BLOCKED]`, mouseX + 9, mouseY - 7);
-                    ctx.fillStyle = '#ff4444'; 
+                    ctx.fillStyle = 'var(--error-red)';
                     ctx.fillText(`[BLOCKED]`, mouseX + 8, mouseY - 8);
                 }
             }
