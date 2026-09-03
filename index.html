@@ -2,8 +2,10 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>bathymetry</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Bathymetry</title>
+    <!-- PeerJS for WebRTC Multiplayer -->
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <style>
         :root {
             --ultramarine: #3b82f6;
@@ -38,7 +40,7 @@
             border-left: 2px solid #555;
             border-radius: 4px;
             box-shadow: 0 0 40px rgba(0, 0, 0, 1), 10px 10px 20px rgba(0,0,0,0.8);
-            cursor: none;
+            transform-origin: top center;
         }
         
         #ui-header {
@@ -52,7 +54,6 @@
             box-shadow: 0 2px 0 #222; 
         }
         
-        /* --- TTY / CRT SCREEN --- */
         .tty-screen {
             background: #050805;
             border: 4px solid #1a1a1a;
@@ -88,7 +89,8 @@
         }
 
         #turn-indicator {
-            width: 440px; 
+            flex: 1; 
+            margin-right: 20px; 
             height: 64px;
             display: flex;
             justify-content: center;
@@ -101,7 +103,6 @@
             box-sizing: border-box;
         }
 
-        /* --- EXPANDED CANVAS DISPLAY --- */
         #canvas-wrapper {
             width: 960px;
             height: 540px;
@@ -119,9 +120,9 @@
             cursor: none; 
             position: relative;
             z-index: 1;
+            touch-action: none; 
         }
 
-        /* --- MULTI-PAGE TACTICAL OVERLAY --- */
         #help-overlay {
             position: absolute;
             inset: 0;
@@ -139,9 +140,7 @@
             text-align: left;
             cursor: pointer;
         }
-        #help-overlay.hidden {
-            display: none;
-        }
+        #help-overlay.hidden { display: none; }
         .help-page {
             display: none;
             flex-direction: column;
@@ -149,9 +148,7 @@
             max-width: 720px;
             height: 320px; 
         }
-        .help-page.active {
-            display: flex;
-        }
+        .help-page.active { display: flex; }
         #help-overlay h2 {
             color: var(--amber);
             text-shadow: 0 0 8px var(--amber);
@@ -174,9 +171,7 @@
             border-left: 2px solid #2a3a2a;
             padding-left: 14px;
         }
-        #help-overlay strong {
-            color: #88aa99;
-        }
+        #help-overlay strong { color: #88aa99; }
         .blink-container {
             position: absolute;
             bottom: 40px;
@@ -190,14 +185,12 @@
             font-weight: bold;
             font-size: 1.1rem;
         }
-        @keyframes blinker {
-            50% { opacity: 0; }
-        }
+        @keyframes blinker { 50% { opacity: 0; } }
 
-        /* --- HARDWARE PLATE --- */
+        /* NATO Plate Padding & Screws */
         .nato-plate {
             background: var(--nato-metal);
-            padding: 16px 24px; /* Increased padding to give screws physical clearance */
+            padding: 16px 20px; 
             border-radius: 2px;
             border: 1px solid #9db0a5;
             border-bottom: 2px solid #5a6660;
@@ -225,12 +218,11 @@
             box-shadow: 0 1px 0 rgba(255,255,255,0.2);
             transform: rotate(45deg);
         }
-        .screw.tl { top: 5px; left: 5px; transform: rotate(12deg); }
-        .screw.tr { top: 5px; right: 5px; transform: rotate(-24deg); }
-        .screw.bl { bottom: 5px; left: 5px; transform: rotate(85deg); }
-        .screw.br { bottom: 5px; right: 5px; transform: rotate(-8deg); }
+        .screw.tl { top: 7px; left: 8px; transform: rotate(12deg); }
+        .screw.tr { top: 7px; right: 8px; transform: rotate(-24deg); }
+        .screw.bl { bottom: 7px; left: 8px; transform: rotate(85deg); }
+        .screw.br { bottom: 7px; right: 8px; transform: rotate(-8deg); }
 
-        /* --- ROTARY CAM SWITCH --- */
         .cam-switch-module {
             width: 62px;
             height: 62px;
@@ -297,17 +289,13 @@
         .cam-pointer::after {
             content: "";
             position: absolute;
-            top: 2px;
-            left: 3px;
-            width: 1.5px;
-            height: 8px;
+            top: 2px; left: 3px; width: 1.5px; height: 8px;
             background: #ffffff;
             box-shadow: 0 0 2px #fff;
         }
         .cam-pointer.pos-left { transform: rotate(-38deg); }
         .cam-pointer.pos-right { transform: rotate(38deg); }
 
-        /* --- BUTTONS --- */
         .btn-toggle {
             width: 52px;
             height: 52px;
@@ -344,7 +332,6 @@
             box-shadow: 4px 4px 8px rgba(0,0,0,0.7), inset 0 0 12px rgba(80, 0, 0, 0.9);
         }
 
-        /* --- NIXIE & ROCKER MODULE --- */
         .hardware-module {
             display: flex;
             align-items: center;
@@ -422,7 +409,6 @@
             border-top: 1px solid #000;
         }
 
-        /* --- SEGMENTED CAPTURE BAR --- */
         #scoreBoard {
             width: 960px;
             height: 32px;
@@ -444,10 +430,7 @@
             content: "";
             position: absolute;
             inset: 0;
-            background: repeating-linear-gradient(90deg, 
-                transparent, transparent 6px, 
-                rgba(0,0,0,0.85) 6px, rgba(0,0,0,0.85) 8px
-            );
+            background: repeating-linear-gradient(90deg, transparent, transparent 6px, rgba(0,0,0,0.85) 6px, rgba(0,0,0,0.85) 8px);
             z-index: 10;
             pointer-events: none;
             box-shadow: inset 0 2px 8px rgba(0,0,0,0.8);
@@ -516,15 +499,13 @@
 
     <div id="game-container">
         <div id="ui-header">
-            <div id="turn-indicator" class="tty-screen tty-text">> CH 1 (ULTRAMARINE) ACTIVE - 64 DROPS LEFT</div>
+            <div id="turn-indicator" class="tty-screen tty-text">> INITIALIZING TACTICAL SYSTEMS...</div>
             
             <div class="nato-plate">
-                <div class="screw tl"></div>
-                <div class="screw tr"></div>
-                <div class="screw bl"></div>
-                <div class="screw br"></div>
+                <div class="screw tl"></div><div class="screw tr"></div>
+                <div class="screw bl"></div><div class="screw br"></div>
 
-                <div class="cam-switch-module" onmousedown="hardwareRotaryClick(); toggleGameMode()">
+                <div class="cam-switch-module" onmousedown="hardwareRotaryClick(); toggleGameMode()" ontouchstart="hardwareRotaryClick(); toggleGameMode(); event.preventDefault()">
                     <div class="cam-plate">
                         <span class="cam-label man">2P</span>
                         <span class="cam-label auto">CPU</span>
@@ -534,37 +515,36 @@
                     </div>
                 </div>
 
-                <button id="infoToggleBtn" class="btn-toggle active" onmousedown="hardwareClick(); toggleHelp()" onmouseup="hardwareRelease()" onmouseleave="hardwareRelease()">
-                    <span>INFO</span><span>ON</span>
+                <button id="linkToggleBtn" class="btn-toggle" onmousedown="hardwareClick(); copyInviteLink()" onmouseup="hardwareRelease()" onmouseleave="hardwareRelease()" ontouchstart="hardwareClick(); copyInviteLink(); event.preventDefault()" ontouchend="hardwareRelease()">
+                    <span>NET</span><span>LINK</span>
                 </button>
-                <button id="audioToggleBtn" class="btn-toggle" onmousedown="hardwareClick(); toggleAudio()" onmouseup="hardwareRelease()" onmouseleave="hardwareRelease()">
-                    <span>AUDIO</span><span>OFF</span>
+                <button id="infoToggleBtn" class="btn-toggle active" onmousedown="hardwareClick(); toggleHelp()" onmouseup="hardwareRelease()" onmouseleave="hardwareRelease()" ontouchstart="hardwareClick(); toggleHelp(); event.preventDefault()" ontouchend="hardwareRelease()">
+                    <span>INFO</span>
                 </button>
-                <button id="terrainToggleBtn" class="btn-toggle" onmousedown="hardwareClick(); toggleTerrainPeek()" onmouseup="hardwareRelease()" onmouseleave="hardwareRelease()">
-                    <span>PEEK</span><span>OFF</span>
+                <button id="audioToggleBtn" class="btn-toggle" onmousedown="hardwareClick(); toggleAudio()" onmouseup="hardwareRelease()" onmouseleave="hardwareRelease()" ontouchstart="hardwareClick(); toggleAudio(); event.preventDefault()" ontouchend="hardwareRelease()">
+                    <span>AUDIO</span>
+                </button>
+                <button id="terrainToggleBtn" class="btn-toggle" onmousedown="hardwareClick(); toggleTerrainPeek()" onmouseup="hardwareRelease()" onmouseleave="hardwareRelease()" ontouchstart="hardwareClick(); toggleTerrainPeek(); event.preventDefault()" ontouchend="hardwareRelease()">
+                    <span>PEEK</span>
                 </button>
                 
                 <div class="hardware-module">
-                    <div class="module-label">
-                        <span>OSC</span>
-                        <span>FREQ</span>
-                    </div>
+                    <div class="module-label"><span>OSC</span><span>FREQ</span></div>
                     <div class="nixie-tube">
                         <div class="nixie-mesh"></div>
                         <span class="nixie-off">8</span>
                         <span class="nixie-on" id="freqVal">2</span>
                     </div>
                     <div class="rocker-switch">
-                        <button class="rocker-btn up" onmousedown="hardwareClick(); changeFreq(1)" onmouseup="hardwareRelease()" onmouseleave="hardwareRelease()">▲</button>
-                        <button class="rocker-btn down" onmousedown="hardwareClick(); changeFreq(-1)" onmouseup="hardwareRelease()" onmouseleave="hardwareRelease()">▼</button>
+                        <button class="rocker-btn up" onmousedown="hardwareClick(); changeFreq(1)" onmouseup="hardwareRelease()" onmouseleave="hardwareRelease()" ontouchstart="hardwareClick(); changeFreq(1); event.preventDefault()" ontouchend="hardwareRelease()">▲</button>
+                        <button class="rocker-btn down" onmousedown="hardwareClick(); changeFreq(-1)" onmouseup="hardwareRelease()" onmouseleave="hardwareRelease()" ontouchstart="hardwareClick(); changeFreq(-1); event.preventDefault()" ontouchend="hardwareRelease()">▼</button>
                     </div>
                 </div>
             </div>
         </div>
-        
+
         <div id="canvas-wrapper" class="tty-screen">
-            <div id="help-overlay" onmousedown="advanceHelp()">
-                
+            <div id="help-overlay" onmousedown="advanceHelp()" ontouchstart="advanceHelp(); event.preventDefault()">
                 <div id="help-page-0" class="help-page active">
                     <h2>> SYS_MANUAL: OBJECTIVE</h2>
                     <ul>
@@ -573,17 +553,15 @@
                         <li><strong>VICTORY (THE CRUCIBLE):</strong> Push your resonance past the <strong>55% CRIT threshold</strong> (marked on the meter) to trigger an immediate, irreversible system assimilation.</li>
                     </ul>
                 </div>
-
                 <div id="help-page-1" class="help-page">
                     <h2>> SYS_MANUAL: HARDWARE OP</h2>
                     <ul>
-                        <li><strong>DEPLOYMENT:</strong> Click the grid to drop an acoustic node. Hardware cannot be placed within 15px of existing nodes (indicated by the Red Zone crosshair).</li>
-                        <li><strong>OSC FREQ:</strong> Use the Rocker Switch to dial your output frequency (1-9) <em>before</em> clicking to deploy.</li>
+                        <li><strong>DEPLOYMENT:</strong> Touch/click and drag to acquire target coordinates. Release to drop payload. Hardware cannot be placed within 15px of existing nodes (Red Zone crosshair).</li>
+                        <li><strong>OSC FREQ:</strong> Use the Rocker Switch to dial your output frequency (1-9) <em>before</em> initiating a drop sequence.</li>
                         <li><strong>PEEK:</strong> Toggle to strip away the wave simulation and analyze raw underlying topography.</li>
-                        <li><strong>CPU MODE:</strong> Rotate the cam switch to alternate between 2P LOCAL and CPU operation.</li>
+                        <li><strong>CPU / NET:</strong> Play locally against CPU, or click NET LINK to copy a WebRTC invite URL for remote lockstep operation.</li>
                     </ul>
                 </div>
-
                 <div id="help-page-2" class="help-page">
                     <h2>> SYS_MANUAL: TACTICAL PHYSICS</h2>
                     <ul>
@@ -592,188 +570,334 @@
                         <li><strong>TOPOGRAPHY:</strong> Elevation is critical. Hardware dropped on high ridges receives massive amplitude multipliers. Deep trenches choke signal momentum.</li>
                     </ul>
                 </div>
-
-                <div class="blink-container">
-                    <span id="help-blink-text" class="blink-text">> CLICK TO PROCEED (1/3) <</span>
-                </div>
+                <div class="blink-container"><span id="help-blink-text" class="blink-text">> CLICK TO PROCEED (1/3) <</span></div>
             </div>
-
             <canvas id="gameCanvas" width="960" height="540"></canvas>
         </div>
         
         <div id="scoreBoard">
-            <div id="barBlue"></div>
-            <div id="barNeutral"></div>
-            <div id="barAmber"></div>
-            
+            <div id="barBlue"></div><div id="barNeutral"></div><div id="barAmber"></div>
             <div id="meterScale">
-                <div class="meter-tick" style="left: 25%;"></div>
-                <span class="meter-label" style="left: 25%;">25%</span>
-                
-                <div class="meter-crit-tick" style="left: 45%;"></div>
-                <span class="meter-crit-label" style="left: 45%;">CRIT</span>
-                
-                <div class="meter-tick" style="left: 50%; height: 12px; background: rgba(255,255,255,0.7);"></div>
-                <span class="meter-label" style="left: 50%;">50%</span>
-                
-                <div class="meter-crit-tick" style="left: 55%;"></div>
-                <span class="meter-crit-label" style="left: 55%;">CRIT</span>
-
-                <div class="meter-tick" style="left: 75%;"></div>
-                <span class="meter-label" style="left: 75%;">75%</span>
+                <div class="meter-tick" style="left: 25%;"></div><span class="meter-label" style="left: 25%;">25%</span>
+                <div class="meter-crit-tick" style="left: 45%;"></div><span class="meter-crit-label" style="left: 45%;">CRIT</span>
+                <div class="meter-tick" style="left: 50%; height: 12px; background: rgba(255,255,255,0.7);"></div><span class="meter-label" style="left: 50%;">50%</span>
+                <div class="meter-crit-tick" style="left: 55%;"></div><span class="meter-crit-label" style="left: 55%;">CRIT</span>
+                <div class="meter-tick" style="left: 75%;"></div><span class="meter-label" style="left: 75%;">75%</span>
             </div>
         </div>
     </div>
 
 <script>
+    // ==========================================
+    // 1. CONSTANTS, CONFIG & STATE
+    // ==========================================
+    const simW = 960;
+    const simH = 540;
+    const bufferSize = simW * simH;
+    const BASE_FREQ = 0.08;
+    const EXCLUSION_RADIUS = 15; 
+    const MAX_DROPS = 64; 
+    const SETTLE_FRAMES = 420; 
+    const WIN_THRESHOLD = 55;
+    const PHI = 1.61803398875;
+    const totalHelpPages = 3;
+
+    // Fixed Timestep Config
+    const PHYSICS_TICK_RATE = 60;
+    const FIXED_TIME_STEP = 1000 / PHYSICS_TICK_RATE;
+    let lastTime = performance.now();
+    let accumulator = 0;
+
+    // Deterministic Seed & Network State
+    let currentMapSeed = Math.floor(Math.random() * 0xffffffff);
+    let peer = null;
+    let netConn = null;
+    let isHost = true;
+    let myPlayerId = 0; 
+
+    // TTY Messaging System
+    let ttyOverrideMsg = null;
+    let ttyOverrideColor = "";
+    let ttyOverrideTimer = 0;
+    let ttyPersistentMsg = null;
+    let ttyPersistentColor = "";
+
+    // Global Game State
+    let nodes = [];
+    let ripples = []; 
+    let time = 0;
+    let gameOver = false;
+    let dominatingPlayer = -1;
+    let dropsRemaining = 0;
+    let evaluatingWin = false;
+    let evalTimer = 0;
+    let activeColor = 0; 
+    let peekTerrain = false;
+    let vsCpu = false;
+    let isCpuThinking = false;
+    let simulationActive = false; 
+
+    let p1Drops = MAX_DROPS;
+    let p2Drops = MAX_DROPS;
+    let currentP1Pct = 0; 
+    let currentP2Pct = 0;
+    let currentHarmonic = 3; 
+    let currentFreq = currentHarmonic * BASE_FREQ;
+
+    // Interaction State
+    let isHardwarePressed = false;
+    let mouseX = -100;
+    let mouseY = -100;
+    let isHovering = false;
+    let isTargeting = false;
+
+    // Audio & UI State
     let audioCtx = null;
     let audioEnabled = false;
     let helpEnabled = true; 
     let currentHelpPage = 0;
-    const totalHelpPages = 3;
-    const PHI = 1.61803398875;
-    
-    let synthGain = null; 
-    let sfxGain = null;   
-    
-    let masterFilter = null;
-    let masterCompressor = null;
-    
+    let synthGain = null, sfxGain = null;   
+    let masterFilter = null, masterCompressor = null;
     let synthVoices = { 0: {}, 1: {} };
     let synthInitialized = false;
+
+    // Physics Arrays
+    let zOld = [new Float32Array(bufferSize), new Float32Array(bufferSize)];
+    let z = [new Float32Array(bufferSize), new Float32Array(bufferSize)];
+    let zNew = [new Float32Array(bufferSize), new Float32Array(bufferSize)];
+    let E = [new Float32Array(bufferSize), new Float32Array(bufferSize)];
+    let E_smooth = [new Float32Array(bufferSize), new Float32Array(bufferSize)]; 
+    let terrainSpeed = new Float32Array(bufferSize); 
+    let terrainHeight = new Uint8Array(bufferSize);
+    let terrainLight = new Int8Array(bufferSize);
+    let terrainDamping = new Float32Array(bufferSize); 
+    let edgeDamping = new Float32Array(bufferSize);
+    let vignetteMap = new Float32Array(bufferSize);
+
+    // DOM References
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    const turnIndicator = document.getElementById('turn-indicator');
+    const terrainToggleBtn = document.getElementById('terrainToggleBtn');
+    const barBlue = document.getElementById('barBlue');
+    const barNeutral = document.getElementById('barNeutral');
+    const barAmber = document.getElementById('barAmber');
+
+    // ==========================================
+    // 2. NETWORK & TTY
+    // ==========================================
+
+    function showSysMsg(msg, color, frames = 0) {
+        if (frames > 0) {
+            ttyOverrideMsg = msg;
+            ttyOverrideColor = color;
+            ttyOverrideTimer = frames;
+        } else {
+            ttyPersistentMsg = msg;
+            ttyPersistentColor = color;
+        }
+    }
+
+    function clearPersistentMsg() {
+        ttyPersistentMsg = null;
+    }
+
+    function seededRandom() {
+        let t = currentMapSeed += 0x6D2B79F5;
+        t = Math.imul(t ^ t >>> 15, t | 1);
+        t ^= t + Math.imul(t ^ t >>> 7, t | 61);
+        return ((t ^ t >>> 14) >>> 0) / 4294967296;
+    }
+
+    function initNetwork() {
+        peer = new Peer(); 
+        
+        peer.on('open', (id) => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const joinId = urlParams.get('join');
+            
+            if (joinId) {
+                showSysMsg("> CONNECTING TO HOST...", "var(--amber)");
+                window.history.replaceState({}, document.title, window.location.pathname);
+                joinNetwork(joinId);
+            }
+        });
+
+        peer.on('connection', (conn) => {
+            if (netConn) { conn.close(); return; } 
+            netConn = conn;
+            isHost = true;
+            setupConnectionHandlers();
+        });
+
+        peer.on('error', (err) => {
+            showSysMsg(`> NET ERR: ${err.type}`, "var(--error-red)", 240);
+            document.getElementById('linkToggleBtn').classList.remove('active');
+        });
+    }
+
+    function copyInviteLink() {
+        if (!peer || !peer.id) {
+            showSysMsg("> RADIO NOT READY", "var(--error-red)", 120);
+            return;
+        }
+        if (netConn) {
+            showSysMsg("> LINK ALREADY ACTIVE", "var(--amber)", 120);
+            return; 
+        }
+
+        const joinUrl = window.location.origin + window.location.pathname + '?join=' + peer.id;
+        
+        navigator.clipboard.writeText(joinUrl).then(() => {
+            showSysMsg("> UPLINK URL COPIED - AWAITING PEER", "var(--amber)", 300);
+            
+            const btn = document.getElementById('linkToggleBtn');
+            btn.classList.add('active');
+            setTimeout(() => { if (!netConn) btn.classList.remove('active'); }, 200);
+
+        }).catch(err => {
+            console.error('Clipboard failed: ', err);
+            showSysMsg("> ERR: CLIPBOARD DENIED", "var(--error-red)", 180);
+        });
+    }
+
+    function joinNetwork(targetId) {
+        if (!targetId || !peer) return;
+        netConn = peer.connect(targetId, { reliable: true });
+        isHost = false;
+        setupConnectionHandlers();
+    }
+
+    function setupConnectionHandlers() {
+        myPlayerId = isHost ? 0 : 1; 
+
+        netConn.on('open', () => {
+            clearPersistentMsg();
+            showSysMsg("> SECURE LINK ESTABLISHED", "var(--ultramarine)", 240);
+            vsCpu = false; 
+            
+            const pointer = document.getElementById('cam-pointer');
+            pointer.classList.remove('pos-right');
+            pointer.classList.add('pos-left');
+
+            document.getElementById('linkToggleBtn').classList.add('active');
+
+            if (isHost) {
+                let newSeed = Math.floor(Math.random() * 0xffffffff);
+                netConn.send({ type: 'SYNC_SEED', data: newSeed });
+                currentMapSeed = newSeed;
+                resetGame(); 
+            }
+        });
+
+        netConn.on('data', (payload) => {
+            if (payload.type === 'SYNC_SEED') {
+                currentMapSeed = payload.data;
+                resetGame();
+            }
+            else if (payload.type === 'TACTICAL_DROP') {
+                let data = payload.data;
+                executePlayerMove(data.x, data.y, data.player, data.harmonic);
+            }
+        });
+
+        netConn.on('close', () => {
+            showSysMsg("> LINK SEVERED", "var(--error-red)", 300);
+            netConn = null;
+            myPlayerId = 0; 
+            document.getElementById('linkToggleBtn').classList.remove('active');
+        });
+    }
+
+    function dispatchDrop(x, y, player, harmonic) {
+        if (netConn) {
+            netConn.send({
+                type: 'TACTICAL_DROP',
+                data: { x, y, player, harmonic }
+            });
+        }
+        executePlayerMove(x, y, player, harmonic);
+    }
+
+    // ==========================================
+    // 3. CORE LOGIC & CONTROLS
+    // ==========================================
+
+    function resizeUI() {
+        const container = document.getElementById('game-container');
+        const availableWidth = window.innerWidth - 20; 
+        const scale = Math.min(availableWidth / 1004, 1); 
+        if (scale < 1) {
+            container.style.transform = `scale(${scale})`;
+            container.style.marginBottom = `-${container.offsetHeight * (1 - scale)}px`;
+        } else {
+            container.style.transform = 'none';
+            container.style.marginBottom = '0px';
+        }
+    }
+    window.addEventListener('resize', resizeUI);
+    window.addEventListener('orientationchange', resizeUI);
+    resizeUI(); 
 
     function ensureAudioInit() {
         if (!audioCtx) {
             audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            
-            sfxGain = audioCtx.createGain();
-            sfxGain.gain.setValueAtTime(0.85, audioCtx.currentTime);
-            sfxGain.connect(audioCtx.destination);
-            
-            synthGain = audioCtx.createGain();
-            synthGain.gain.setValueAtTime(0.0001, audioCtx.currentTime);
-            synthGain.connect(audioCtx.destination);
-
-            masterFilter = audioCtx.createBiquadFilter();
-            masterFilter.type = 'lowpass';
-            masterFilter.frequency.setValueAtTime(1200, audioCtx.currentTime);
-            masterFilter.Q.setValueAtTime(3.0, audioCtx.currentTime);
-            
-            masterCompressor = audioCtx.createDynamicsCompressor();
-            masterCompressor.threshold.setValueAtTime(-24, audioCtx.currentTime);
-            masterCompressor.knee.setValueAtTime(30, audioCtx.currentTime);
-            masterCompressor.ratio.setValueAtTime(12, audioCtx.currentTime);
-            masterCompressor.attack.setValueAtTime(0.003, audioCtx.currentTime);
-            masterCompressor.release.setValueAtTime(0.25, audioCtx.currentTime);
-
-            masterFilter.connect(masterCompressor);
-            masterCompressor.connect(synthGain);
-            
+            sfxGain = audioCtx.createGain(); sfxGain.gain.setValueAtTime(0.85, audioCtx.currentTime); sfxGain.connect(audioCtx.destination);
+            synthGain = audioCtx.createGain(); synthGain.gain.setValueAtTime(0.0001, audioCtx.currentTime); synthGain.connect(audioCtx.destination);
+            masterFilter = audioCtx.createBiquadFilter(); masterFilter.type = 'lowpass'; masterFilter.frequency.setValueAtTime(1200, audioCtx.currentTime); masterFilter.Q.setValueAtTime(3.0, audioCtx.currentTime);
+            masterCompressor = audioCtx.createDynamicsCompressor(); masterCompressor.threshold.setValueAtTime(-24, audioCtx.currentTime); masterCompressor.knee.setValueAtTime(30, audioCtx.currentTime); masterCompressor.ratio.setValueAtTime(12, audioCtx.currentTime); masterCompressor.attack.setValueAtTime(0.003, audioCtx.currentTime); masterCompressor.release.setValueAtTime(0.25, audioCtx.currentTime);
+            masterFilter.connect(masterCompressor); masterCompressor.connect(synthGain);
             initGlobalSynth();
         }
-        if (audioCtx.state === 'suspended') {
-            audioCtx.resume();
-        }
+        if (audioCtx.state === 'suspended') audioCtx.resume();
     }
-
-    let isHardwarePressed = false;
 
     function hardwareClick() {
         ensureAudioInit();
         if (isHardwarePressed) return;
         isHardwarePressed = true;
-        
         if (navigator.vibrate) navigator.vibrate(10);
-        
         let now = audioCtx.currentTime;
-        let osc = audioCtx.createOscillator();
-        let gain = audioCtx.createGain();
-        let filter = audioCtx.createBiquadFilter();
-        
-        osc.type = 'square';
-        osc.frequency.setValueAtTime(300, now);
-        osc.frequency.exponentialRampToValueAtTime(30, now + 0.03); 
-        
-        filter.type = 'lowpass';
-        filter.frequency.setValueAtTime(1500, now);
-        filter.frequency.linearRampToValueAtTime(100, now + 0.03);
-        
-        gain.gain.setValueAtTime(0.4, now);
-        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.03);
-        
-        osc.connect(filter);
-        filter.connect(gain);
-        gain.connect(sfxGain); 
-        
-        osc.start(now);
-        osc.stop(now + 0.04);
+        let osc = audioCtx.createOscillator(); let gain = audioCtx.createGain(); let filter = audioCtx.createBiquadFilter();
+        osc.type = 'square'; osc.frequency.setValueAtTime(300, now); osc.frequency.exponentialRampToValueAtTime(30, now + 0.03); 
+        filter.type = 'lowpass'; filter.frequency.setValueAtTime(1500, now); filter.frequency.linearRampToValueAtTime(100, now + 0.03);
+        gain.gain.setValueAtTime(0.4, now); gain.gain.exponentialRampToValueAtTime(0.001, now + 0.03);
+        osc.connect(filter); filter.connect(gain); gain.connect(sfxGain); 
+        osc.start(now); osc.stop(now + 0.04);
     }
 
     function hardwareRelease() {
         if (!isHardwarePressed) return;
         isHardwarePressed = false;
-        
         if (navigator.vibrate) navigator.vibrate(5);
-        
         let now = audioCtx.currentTime;
-        let osc = audioCtx.createOscillator();
-        let gain = audioCtx.createGain();
-        
-        osc.type = 'triangle';
-        osc.frequency.setValueAtTime(800, now);
-        osc.frequency.exponentialRampToValueAtTime(150, now + 0.02); 
-        
-        gain.gain.setValueAtTime(0.15, now);
-        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.02);
-        
-        osc.connect(gain);
-        gain.connect(sfxGain); 
-        
-        osc.start(now);
-        osc.stop(now + 0.03);
+        let osc = audioCtx.createOscillator(); let gain = audioCtx.createGain();
+        osc.type = 'triangle'; osc.frequency.setValueAtTime(800, now); osc.frequency.exponentialRampToValueAtTime(150, now + 0.02); 
+        gain.gain.setValueAtTime(0.15, now); gain.gain.exponentialRampToValueAtTime(0.001, now + 0.02);
+        osc.connect(gain); gain.connect(sfxGain); 
+        osc.start(now); osc.stop(now + 0.03);
     }
 
     function hardwareRotaryClick() {
         ensureAudioInit();
         if (navigator.vibrate) navigator.vibrate([15, 30, 15]);
         let now = audioCtx.currentTime;
-
-        let oscLow = audioCtx.createOscillator();
-        let gainLow = audioCtx.createGain();
-        oscLow.type = 'triangle';
-        oscLow.frequency.setValueAtTime(220, now);
-        oscLow.frequency.exponentialRampToValueAtTime(18, now + 0.06);
-        gainLow.gain.setValueAtTime(0.85, now);
-        gainLow.gain.exponentialRampToValueAtTime(0.001, now + 0.06);
-
-        let oscDetent = audioCtx.createOscillator();
-        let gainDetent = audioCtx.createGain();
-        let filterDetent = audioCtx.createBiquadFilter();
-        oscDetent.type = 'square';
-        oscDetent.frequency.setValueAtTime(1100, now);
-        oscDetent.frequency.exponentialRampToValueAtTime(80, now + 0.04);
-        filterDetent.type = 'bandpass';
-        filterDetent.frequency.setValueAtTime(1400, now);
-        filterDetent.Q.setValueAtTime(2.0, now);
-        gainDetent.gain.setValueAtTime(0.45, now);
-        gainDetent.gain.exponentialRampToValueAtTime(0.001, now + 0.04);
-
-        oscLow.connect(gainLow);
-        gainLow.connect(sfxGain);
-        
-        oscDetent.connect(filterDetent);
-        filterDetent.connect(gainDetent);
-        gainDetent.connect(sfxGain);
-
+        let oscLow = audioCtx.createOscillator(); let gainLow = audioCtx.createGain();
+        oscLow.type = 'triangle'; oscLow.frequency.setValueAtTime(220, now); oscLow.frequency.exponentialRampToValueAtTime(18, now + 0.06);
+        gainLow.gain.setValueAtTime(0.85, now); gainLow.gain.exponentialRampToValueAtTime(0.001, now + 0.06);
+        let oscDetent = audioCtx.createOscillator(); let gainDetent = audioCtx.createGain(); let filterDetent = audioCtx.createBiquadFilter();
+        oscDetent.type = 'square'; oscDetent.frequency.setValueAtTime(1100, now); oscDetent.frequency.exponentialRampToValueAtTime(80, now + 0.04);
+        filterDetent.type = 'bandpass'; filterDetent.frequency.setValueAtTime(1400, now); filterDetent.Q.setValueAtTime(2.0, now);
+        gainDetent.gain.setValueAtTime(0.45, now); gainDetent.gain.exponentialRampToValueAtTime(0.001, now + 0.04);
+        oscLow.connect(gainLow); gainLow.connect(sfxGain);
+        oscDetent.connect(filterDetent); filterDetent.connect(gainDetent); gainDetent.connect(sfxGain);
         oscLow.start(now); oscLow.stop(now + 0.07);
         oscDetent.start(now); oscDetent.stop(now + 0.05);
     }
 
     function changeFreq(dir) {
         let uiVal = parseInt(document.getElementById('freqVal').innerText) + dir;
-        if (uiVal < 1) uiVal = 1;
-        if (uiVal > 9) uiVal = 9;
-        
+        if (uiVal < 1) uiVal = 1; if (uiVal > 9) uiVal = 9;
         currentHarmonic = uiVal + 1; 
         currentFreq = currentHarmonic * BASE_FREQ;
         document.getElementById('freqVal').innerText = uiVal;
@@ -782,76 +906,74 @@
     function toggleAudio() {
         audioEnabled = !audioEnabled;
         const btn = document.getElementById('audioToggleBtn');
-        
         if (audioEnabled) {
-            btn.innerHTML = "<span>AUDIO</span><span>ON</span>";
             btn.classList.add('active');
             synthGain.gain.setTargetAtTime(1.0, audioCtx.currentTime, 0.1);
         } else {
-            btn.innerHTML = "<span>AUDIO</span><span>OFF</span>";
             btn.classList.remove('active');
             synthGain.gain.setTargetAtTime(0.0001, audioCtx.currentTime, 0.1);
         }
     }
 
     function advanceHelp() {
-        hardwareClick();
-        setTimeout(() => hardwareRelease(), 50); 
-        
+        hardwareClick(); setTimeout(() => hardwareRelease(), 50); 
         const pages = document.querySelectorAll('.help-page');
         const blinkText = document.getElementById('help-blink-text');
-        
         pages[currentHelpPage].classList.remove('active');
         currentHelpPage++;
-
         if (currentHelpPage >= totalHelpPages) {
             toggleHelp(false);
         } else {
             pages[currentHelpPage].classList.add('active');
-            if (currentHelpPage === totalHelpPages - 1) {
-                blinkText.innerText = `> CLICK TO COMMENCE INITIALIZATION <`;
-            } else {
-                blinkText.innerText = `> CLICK TO PROCEED (${currentHelpPage + 1}/${totalHelpPages}) <`;
-            }
+            if (currentHelpPage === totalHelpPages - 1) blinkText.innerText = `> CLICK TO COMMENCE INITIALIZATION <`;
+            else blinkText.innerText = `> CLICK TO PROCEED (${currentHelpPage + 1}/${totalHelpPages}) <`;
         }
     }
 
     function toggleHelp(forceState = null) {
-        if (forceState !== null) {
-            helpEnabled = forceState;
-        } else {
-            helpEnabled = !helpEnabled;
-        }
-        
+        helpEnabled = (forceState !== null) ? forceState : !helpEnabled;
         const btn = document.getElementById('infoToggleBtn');
         const overlay = document.getElementById('help-overlay');
         const pages = document.querySelectorAll('.help-page');
         const blinkText = document.getElementById('help-blink-text');
-        
         if (helpEnabled) {
-            btn.innerHTML = "<span>INFO</span><span>ON</span>";
             btn.classList.add('active');
             overlay.classList.remove('hidden');
-            
             pages.forEach(p => p.classList.remove('active'));
-            currentHelpPage = 0;
-            pages[0].classList.add('active');
+            currentHelpPage = 0; pages[0].classList.add('active');
             blinkText.innerText = `> CLICK TO PROCEED (1/3) <`;
-            
         } else {
-            btn.innerHTML = "<span>INFO</span><span>OFF</span>";
             btn.classList.remove('active');
             overlay.classList.add('hidden');
         }
     }
 
+    function toggleTerrainPeek() {
+        peekTerrain = !peekTerrain;
+        const btn = document.getElementById('terrainToggleBtn');
+        if (peekTerrain) {
+            btn.classList.add('active');
+        } else {
+            btn.classList.remove('active');
+        }
+    }
+
+    function toggleGameMode() {
+        if (netConn) return; 
+        vsCpu = !vsCpu;
+        const pointer = document.getElementById('cam-pointer');
+        if (vsCpu) { pointer.classList.remove('pos-left'); pointer.classList.add('pos-right'); } 
+        else { pointer.classList.remove('pos-right'); pointer.classList.add('pos-left'); }
+        resetGame();
+    }
+
+    // ==========================================
+    // 4. SYNTHESIS & AUDIO
+    // ==========================================
     function initGlobalSynth() {
         if (synthInitialized) return;
         for (let p = 0; p <= 1; p++) {
-            for (let hUI = 1; hUI <= 9; hUI++) {
-                let internalHarmonic = hUI + 1;
-                synthVoices[p][hUI] = createGlobalVoice(p, internalHarmonic);
-            }
+            for (let hUI = 1; hUI <= 9; hUI++) synthVoices[p][hUI] = createGlobalVoice(p, hUI + 1);
         }
         synthInitialized = true;
     }
@@ -860,30 +982,18 @@
         let baseFreq = player === 0 ? 110.0 : 146.83;
         let fundamental = baseFreq * (internalHarmonic * 0.4);
         let now = audioCtx.currentTime;
-
         let multipliers = [1.0, PHI, PHI * PHI];
-        let gainNode = audioCtx.createGain();
-        gainNode.gain.setValueAtTime(0.0001, now); 
-
+        let gainNode = audioCtx.createGain(); gainNode.gain.setValueAtTime(0.0001, now); 
         multipliers.forEach((mult, index) => {
-            let osc = audioCtx.createOscillator();
-            let subGain = audioCtx.createGain();
-
+            let osc = audioCtx.createOscillator(); let subGain = audioCtx.createGain();
             osc.type = index === 0 ? 'sine' : 'triangle';
-            let freq = fundamental * mult;
-            if (freq > 3500) freq = 3500;
+            let freq = fundamental * mult; if (freq > 3500) freq = 3500;
             osc.frequency.setValueAtTime(freq, now);
-
             let baseSubGain = index === 0 ? 0.04 : (index === 1 ? 0.025 : 0.012);
             subGain.gain.setValueAtTime(baseSubGain, now);
-
-            osc.connect(subGain);
-            subGain.connect(gainNode);
-            osc.start(now);
+            osc.connect(subGain); subGain.connect(gainNode); osc.start(now);
         });
-
         gainNode.connect(masterFilter); 
-
         return {
             setTerritoryPower: function(totalTerritoryPower) {
                 if (!audioCtx || !audioEnabled) return;
@@ -893,13 +1003,11 @@
             },
             fadeOut: function(fadeDuration = 0.8) {
                 if (!audioCtx) return;
-                let stopTime = audioCtx.currentTime;
-                gainNode.gain.linearRampToValueAtTime(0.0001, stopTime + fadeDuration);
+                gainNode.gain.linearRampToValueAtTime(0.0001, audioCtx.currentTime + fadeDuration);
             },
             triumph: function() {
                 if (!audioCtx) return;
-                let tNow = audioCtx.currentTime;
-                gainNode.gain.setTargetAtTime(0.25, tNow, 0.5);
+                gainNode.gain.setTargetAtTime(0.25, audioCtx.currentTime, 0.5);
             },
             forceSilence: function() {
                 if (!audioCtx) return;
@@ -910,157 +1018,46 @@
 
     function playTransientStrike(player, internalHarmonic) {
         ensureAudioInit(); 
-        
         let baseFreq = player === 0 ? 110.0 : 146.83;
         let fundamental = baseFreq * (internalHarmonic * 0.4);
         let now = audioCtx.currentTime;
-
         let multipliers = [1.0, PHI, PHI * PHI];
-        let strikeGain = audioCtx.createGain();
-        let strikeFilter = audioCtx.createBiquadFilter();
-
-        strikeFilter.type = 'lowpass';
-        strikeFilter.frequency.setValueAtTime(1500, now);
-
-        strikeGain.gain.setValueAtTime(0.001, now);
-        strikeGain.gain.linearRampToValueAtTime(0.15, now + 0.05);
-        strikeGain.gain.exponentialRampToValueAtTime(0.0001, now + 1.2);
-
+        let strikeGain = audioCtx.createGain(); let strikeFilter = audioCtx.createBiquadFilter();
+        strikeFilter.type = 'lowpass'; strikeFilter.frequency.setValueAtTime(1500, now);
+        strikeGain.gain.setValueAtTime(0.001, now); strikeGain.gain.linearRampToValueAtTime(0.15, now + 0.05); strikeGain.gain.exponentialRampToValueAtTime(0.0001, now + 1.2);
         multipliers.forEach((mult, index) => {
-            let osc = audioCtx.createOscillator();
-            let subGain = audioCtx.createGain();
-
+            let osc = audioCtx.createOscillator(); let subGain = audioCtx.createGain();
             osc.type = index === 0 ? 'sine' : 'triangle';
-            let freq = fundamental * mult;
-            if (freq > 3500) freq = 3500;
+            let freq = fundamental * mult; if (freq > 3500) freq = 3500;
             osc.frequency.setValueAtTime(freq, now);
-
             let baseSubGain = index === 0 ? 0.06 : (index === 1 ? 0.03 : 0.015);
             subGain.gain.setValueAtTime(baseSubGain, now);
-
-            osc.connect(subGain);
-            subGain.connect(strikeGain);
-            osc.start(now);
-            osc.stop(now + 1.3); 
+            osc.connect(subGain); subGain.connect(strikeGain);
+            osc.start(now); osc.stop(now + 1.3); 
         });
-
-        strikeGain.connect(strikeFilter);
-        strikeFilter.connect(sfxGain); 
+        strikeGain.connect(strikeFilter); strikeFilter.connect(sfxGain); 
     }
-
-    const canvas = document.getElementById('gameCanvas');
-    const ctx = canvas.getContext('2d');
-    const turnIndicator = document.getElementById('turn-indicator');
-    const terrainToggleBtn = document.getElementById('terrainToggleBtn');
     
-    const barBlue = document.getElementById('barBlue');
-    const barNeutral = document.getElementById('barNeutral');
-    const barAmber = document.getElementById('barAmber');
-    
-    let activeColor = 0; 
-    let peekTerrain = false;
-    let vsCpu = false;
-    let isCpuThinking = false;
-    
-    let simulationActive = false; 
-    
-    const BASE_FREQ = 0.08;
-    const EXCLUSION_RADIUS = 15; 
-    const MAX_DROPS = 64; 
-
-    let p1Drops = MAX_DROPS;
-    let p2Drops = MAX_DROPS;
-
-    let currentP1Pct = 0; 
-    let currentP2Pct = 0;
-
-    let currentHarmonic = 3; 
-    let currentFreq = currentHarmonic * BASE_FREQ;
-    
-    let gameOver = false;
-    let dominatingPlayer = -1;
-    let dropsRemaining = 0;
-    let evaluatingWin = false;
-    let evalTimer = 0;
-    const SETTLE_FRAMES = 420; 
-    
-    const WIN_THRESHOLD = 55;
-
-    let mouseX = -100;
-    let mouseY = -100;
-    let isHovering = false;
-
     function getAmplitude(harmonic) {
         if (harmonic === 2) return 5000;  
         if (harmonic === 3) return 3000;  
-        return 8000 / harmonic;           
+        return 8000 / harmonic;            
     }
 
-    const simW = 960;
-    const simH = 540;
-    const bufferSize = simW * simH;
-
-    canvas.addEventListener('mousemove', (e) => {
-        const rect = canvas.getBoundingClientRect();
-        const scaleX = simW / rect.width;
-        const scaleY = simH / rect.height;
-        mouseX = (e.clientX - rect.left) * scaleX;
-        mouseY = (e.clientY - rect.top) * scaleY;
-    });
-
-    canvas.addEventListener('mouseenter', () => isHovering = true);
-    canvas.addEventListener('mouseleave', () => isHovering = false);
-
-    function toggleTerrainPeek() {
-        peekTerrain = !peekTerrain;
-        if (peekTerrain) {
-            terrainToggleBtn.innerHTML = "<span>PEEK</span><span>ON</span>";
-            terrainToggleBtn.classList.add('active');
-        } else {
-            terrainToggleBtn.innerHTML = "<span>PEEK</span><span>OFF</span>";
-            terrainToggleBtn.classList.remove('active');
-        }
-    }
-
-    function toggleGameMode() {
-        vsCpu = !vsCpu;
-        const pointer = document.getElementById('cam-pointer');
-        
-        if (vsCpu) {
-            pointer.classList.remove('pos-left');
-            pointer.classList.add('pos-right');
-        } else {
-            pointer.classList.remove('pos-right');
-            pointer.classList.add('pos-left');
-        }
-        resetGame();
-    }
-
+    // ==========================================
+    // 5. MAP & GAME STATE
+    // ==========================================
     function resetGame() {
         if (synthInitialized) {
             for (let p = 0; p <= 1; p++) {
-                for (let hUI = 1; hUI <= 9; hUI++) {
-                    synthVoices[p][hUI].forceSilence();
-                }
+                for (let hUI = 1; hUI <= 9; hUI++) synthVoices[p][hUI].forceSilence();
             }
         }
+        nodes = []; ripples = [];
+        gameOver = false; simulationActive = false; 
+        dominatingPlayer = -1; evaluatingWin = false; evalTimer = 0; activeColor = 0;
+        p1Drops = MAX_DROPS; p2Drops = MAX_DROPS; currentP1Pct = 0; currentP2Pct = 0;
         
-        nodes = [];
-        ripples = [];
-        gameOver = false;
-        simulationActive = false; 
-        dominatingPlayer = -1;
-        evaluatingWin = false;
-        evalTimer = 0;
-        activeColor = 0;
-        
-        p1Drops = MAX_DROPS;
-        p2Drops = MAX_DROPS;
-        currentP1Pct = 0;
-        currentP2Pct = 0;
-        
-        turnIndicator.innerText = `> CH 1 (ULTRAMARINE) ACTIVE - ${p1Drops} DROPS LEFT`;
-        turnIndicator.style.color = "var(--ultramarine)";
         generateTerrain();
         
         for (let i = 0; i < bufferSize; i++) {
@@ -1068,137 +1065,57 @@
             zOld[1][i] = 0; z[1][i] = 0; zNew[1][i] = 0; E[1][i] = 0; E_smooth[1][i] = 0;
         }
     }
-    
-    let zOld = [new Float32Array(bufferSize), new Float32Array(bufferSize)];
-    let z = [new Float32Array(bufferSize), new Float32Array(bufferSize)];
-    let zNew = [new Float32Array(bufferSize), new Float32Array(bufferSize)];
-    let E = [new Float32Array(bufferSize), new Float32Array(bufferSize)];
-    let E_smooth = [new Float32Array(bufferSize), new Float32Array(bufferSize)]; 
-    
-    let terrainSpeed = new Float32Array(bufferSize); 
-    let terrainHeight = new Uint8Array(bufferSize);
-    let terrainLight = new Int8Array(bufferSize);
-    let terrainDamping = new Float32Array(bufferSize); 
-    
-    let edgeDamping = new Float32Array(bufferSize);
-    let vignetteMap = new Float32Array(bufferSize);
 
     function generateTerrain() {
-        const tCan = document.createElement('canvas');
-        tCan.width = 80; 
-        tCan.height = 45;
-        const tCtx = tCan.getContext('2d');
-        const img = tCtx.createImageData(80, 45);
+        const tCan = document.createElement('canvas'); tCan.width = 80; tCan.height = 45;
+        const tCtx = tCan.getContext('2d'); const img = tCtx.createImageData(80, 45);
         for (let i = 0; i < img.data.length; i += 4) {
-            let val = Math.random() * 255;
+            let val = seededRandom() * 255; 
             img.data[i] = val; img.data[i+1] = val; img.data[i+2] = val; img.data[i+3] = 255;
         }
         tCtx.putImageData(img, 0, 0);
 
-        const mCan = document.createElement('canvas');
-        mCan.width = simW; mCan.height = simH;
+        const mCan = document.createElement('canvas'); mCan.width = simW; mCan.height = simH;
         const mCtx = mCan.getContext('2d');
-        mCtx.filter = 'blur(18px)';
-        mCtx.imageSmoothingEnabled = true;
-        mCtx.drawImage(tCan, 0, 0, simW, simH);
-
+        mCtx.filter = 'blur(18px)'; mCtx.imageSmoothingEnabled = true; mCtx.drawImage(tCan, 0, 0, simW, simH);
         const mData = mCtx.getImageData(0, 0, simW, simH).data;
         
         for (let y = 0; y < simH; y++) {
             for (let x = 0; x < simW; x++) {
                 let i = x + y * simW;
-                
-                let edgeDistX = Math.min(x, simW - 1 - x);
-                let edgeDistY = Math.min(y, simH - 1 - y);
+                let edgeDistX = Math.min(x, simW - 1 - x); let edgeDistY = Math.min(y, simH - 1 - y);
                 let edgeDist = Math.min(edgeDistX, edgeDistY);
-                
-                if (edgeDist < 35) {
-                    edgeDamping[i] = 0.85 + (0.15 * (edgeDist / 35)); 
-                } else {
-                    edgeDamping[i] = 1.0;
-                }
+                edgeDamping[i] = edgeDist < 35 ? 0.85 + (0.15 * (edgeDist / 35)) : 1.0;
+                vignetteMap[i] = edgeDist < 60 ? Math.pow(edgeDist / 60, 0.8) : 1.0;
 
-                if (edgeDist < 60) {
-                    vignetteMap[i] = Math.pow(edgeDist / 60, 0.8);
-                } else {
-                    vignetteMap[i] = 1.0;
-                }
-
-                let raw = mData[i * 4]; 
-                let normalizedRaw = raw / 255;
-                
-                let curve = normalizedRaw < 0.5 
-                    ? 2 * normalizedRaw * normalizedRaw 
-                    : 1 - Math.pow(-2 * normalizedRaw + 2, 2) / 2;
-                
-                let h = curve * 255;
-                let normalized = h / 255;
-                
+                let raw = mData[i * 4]; let normalizedRaw = raw / 255;
+                let curve = normalizedRaw < 0.5 ? 2 * normalizedRaw * normalizedRaw : 1 - Math.pow(-2 * normalizedRaw + 2, 2) / 2;
+                let h = curve * 255; let normalized = h / 255;
                 terrainSpeed[i] = 0.10 + (normalized * 0.40); 
                 terrainDamping[i] = 0.989 + (normalized * 0.010);
                 terrainHeight[i] = h;
             }
         }
-
         for (let y = 0; y < simH; y++) {
             for (let x = 0; x < simW; x++) {
-                let i = x + y * simW;
-                let h = terrainHeight[i];
+                let i = x + y * simW; let h = terrainHeight[i];
                 if (x > 0 && y > 0) {
-                    let hLeft = terrainHeight[i - 1];
-                    let hTop = terrainHeight[i - simW];
-                    let slope = (h - hLeft) + (h - hTop);
+                    let slope = (h - terrainHeight[i - 1]) + (h - terrainHeight[i - simW]);
                     let isContour = (h % 30 <= 2) ? 15 : 0;
                     terrainLight[i] = Math.max(-128, Math.min(127, (slope * 3.5) + isContour)); 
-                } else {
-                    terrainLight[i] = 0;
-                }
+                } else terrainLight[i] = 0;
             }
         }
     }
-    generateTerrain();
-    
-    let nodes = [];
-    let ripples = []; 
-    let time = 0;
-
-    canvas.addEventListener('mousedown', (e) => {
-        if (gameOver || evaluatingWin || helpEnabled || (vsCpu && activeColor === 1 && isCpuThinking)) return; 
-        
-        if (activeColor === 0 && p1Drops <= 0) return;
-        if (activeColor === 1 && p2Drops <= 0) return;
-        
-        if (mouseX >= 0 && mouseX < simW && mouseY >= 0 && mouseY < simH) {
-            
-            let isValidPlacement = true;
-            for (let n of nodes) {
-                if (Math.hypot(n.x - mouseX, n.y - mouseY) < EXCLUSION_RADIUS) {
-                    isValidPlacement = false;
-                    break;
-                }
-            }
-
-            if (isValidPlacement) {
-                executePlayerMove(mouseX, mouseY, activeColor, currentHarmonic);
-            }
-        }
-    });
 
     function executePlayerMove(x, y, player, harmonic) {
-        if (player === 0) p1Drops--;
-        else p2Drops--;
-
-        let uiHarmonic = harmonic - 1;
-        let freq = harmonic * BASE_FREQ;
+        if (player === 0) p1Drops--; else p2Drops--;
+        let uiHarmonic = harmonic - 1; let freq = harmonic * BASE_FREQ;
         let newNode = { x, y, player: player, freq: freq, harmonic: harmonic, uiHarmonic: uiHarmonic };
         nodes.push(newNode);
         
-        if (dominatingPlayer !== -1 && player !== dominatingPlayer) {
-            dropsRemaining--;
-        }
-
+        if (dominatingPlayer !== -1 && player !== dominatingPlayer) dropsRemaining--;
         let initAmplitude = getAmplitude(harmonic);
-        
         playTransientStrike(player, harmonic);
 
         if (nodes.length === 2 && !simulationActive) {
@@ -1210,306 +1127,240 @@
         } else if (simulationActive) {
             ripples.push({ x, y, radius: 2, maxRadius: 28, player: player, opacity: 1.0 });
             z[player][Math.floor(x) + Math.floor(y) * simW] = initAmplitude; 
+        } else if (nodes.length === 1) {
+            // First drop visual feedback
+            ripples.push({ x, y, radius: 2, maxRadius: 28, player: player, opacity: 1.0 });
         }
 
         activeColor = activeColor === 0 ? 1 : 0;
         
-        if (!evaluatingWin && !gameOver) {
-            if (activeColor === 0) {
-                turnIndicator.innerText = `> CH 1 (ULTRAMARINE) ACTIVE - ${p1Drops} DROPS LEFT`;
-                turnIndicator.style.color = "var(--ultramarine)";
-            } else {
-                turnIndicator.innerText = `> CH 2 (AMBER) ACTIVE - ${p2Drops} DROPS LEFT`;
-                turnIndicator.style.color = "var(--amber)";
-            }
-        }
-
-        if (vsCpu && activeColor === 1 && p2Drops > 0 && !gameOver && !evaluatingWin) {
-            triggerCpuTurn();
-        }
+        if (vsCpu && activeColor === 1 && p2Drops > 0 && !gameOver && !evaluatingWin) triggerCpuTurn();
     }
 
     function triggerCpuTurn() {
         isCpuThinking = true;
-        turnIndicator.innerText = "> CH 2 (AMBER) COMPUTING...";
-        turnIndicator.style.color = "var(--amber)";
 
         setTimeout(() => {
-            if (gameOver || evaluatingWin || p2Drops <= 0) {
-                isCpuThinking = false;
-                return;
-            }
+            if (gameOver || evaluatingWin || p2Drops <= 0) { isCpuThinking = false; return; }
 
-            let bestX = Math.floor(simW / 2);
-            let bestY = Math.floor(simH / 2);
-            let bestScore = -999999;
+            let phase = (p2Drops > 45) ? "EARLY" : (p2Drops > 20) ? "MID" : "LATE";
+            let margin = currentP2Pct - currentP1Pct;
+            let state = (margin > 10) ? "WINNING" : (margin < -8) ? "LOSING" : "TIGHT";
             
+            let p1Nodes = nodes.filter(n => n.player === 0);
+            let avgP1Harmonic = p1Nodes.length > 0 ? p1Nodes.reduce((sum, n) => sum + n.uiHarmonic, 0) / p1Nodes.length : 5;
+            let playerSpammingLowFreq = avgP1Harmonic < 4.0;
+
             let strategy = "EXPAND";
+            if (currentP1Pct >= 47) strategy = "PANIC_JAM"; 
+            else if (playerSpammingLowFreq && phase !== "LATE") strategy = "TIT_FOR_TAT"; 
+            else if (phase === "EARLY") strategy = (state === "LOSING") ? "CONTEST" : "EXPAND";
+            else if (phase === "MID") strategy = (state === "LOSING") ? "ATTACK" : "EXPAND";
+            else strategy = (state === "WINNING") ? "DEFEND" : "PANIC_JAM";
+
+            let candidates = [];
+            for (let i = 0; i < 200; i++) candidates.push({ x: 25 + Math.random() * (simW - 50), y: 25 + Math.random() * (simH - 50) });
             
-            if (currentP1Pct > 45) {
-                strategy = "JAM"; 
-            } else if (currentP2Pct > 45) {
-                strategy = Math.random() > 0.3 ? "EXPAND" : "JAM"; 
-            } else {
-                let roll = Math.random();
-                if (currentP1Pct > currentP2Pct) {
-                    if (roll < 0.5) strategy = "ATTACK";
-                    else if (roll < 0.8) strategy = "JAM";
-                    else strategy = "EXPAND";
-                } else {
-                    if (roll < 0.5) strategy = "EXPAND";
-                    else if (roll < 0.8) strategy = "ATTACK";
-                    else strategy = "JAM";
+            for (let n of nodes) {
+                let targetThisNode = true;
+                if (strategy === "PANIC_JAM" || strategy === "ATTACK" || strategy === "CONTEST") targetThisNode = (n.player === 0);
+                else if (strategy === "DEFEND") targetThisNode = (n.player === 1);
+
+                if (targetThisNode) {
+                    for (let i = 0; i < 20; i++) {
+                        let angle = Math.random() * Math.PI * 2;
+                        let dist = EXCLUSION_RADIUS + 1 + (Math.random() * 25); 
+                        candidates.push({ x: n.x + Math.cos(angle) * dist, y: n.y + Math.sin(angle) * dist });
+                    }
                 }
             }
 
-            for (let attempt = 0; attempt < 500; attempt++) {
-                let rx = Math.floor(25 + Math.random() * (simW - 50));
-                let ry = Math.floor(25 + Math.random() * (simH - 50));
+            let bestX = Math.floor(simW / 2); let bestY = Math.floor(simH / 2); let bestScore = -999999; let chosenHarmonic = 3; 
+
+            for (let c of candidates) {
+                let rx = Math.floor(c.x); let ry = Math.floor(c.y);
+                if (rx < 25 || rx >= simW - 25 || ry < 25 || ry >= simH - 25) continue;
                 
-                let validSpot = true;
+                let validSpot = true; let minDistToEnemy = 9999; let minDistToSelf = 9999;
                 for (let n of nodes) {
-                    if (Math.hypot(n.x - rx, n.y - ry) < EXCLUSION_RADIUS) {
-                        validSpot = false;
-                        break;
-                    }
+                    let d = Math.hypot(n.x - rx, n.y - ry);
+                    if (d < EXCLUSION_RADIUS) { validSpot = false; break; }
+                    if (n.player === 0 && d < minDistToEnemy) minDistToEnemy = d;
+                    if (n.player === 1 && d < minDistToSelf) minDistToSelf = d;
                 }
                 if (!validSpot) continue;
 
-                let rIdx = rx + ry * simW;
-                let elevation = terrainHeight[rIdx] / 255.0; 
-                let enemyEnergy = E_smooth[0][rIdx]; 
-                let myEnergy = E_smooth[1][rIdx]; 
-                
-                let score = 0;
-                if (strategy === "ATTACK") {
-                    score = (elevation * 10000) + (enemyEnergy * 1.5) - myEnergy;
-                } else if (strategy === "JAM") {
-                    score = enemyEnergy; 
-                } else { 
-                    score = (elevation * 15000) - (enemyEnergy * 3.0) - myEnergy;
+                let rIdx = rx + ry * simW; let elevation = terrainHeight[rIdx] / 255.0; 
+                let enemyEnergy = E_smooth[0][rIdx]; let myEnergy = E_smooth[1][rIdx]; 
+                let score = 0; let recommendedHarmonic = 3; 
+
+                switch(strategy) {
+                    case "PANIC_JAM": score = (enemyEnergy * 5.0) - (minDistToEnemy * 100); recommendedHarmonic = Math.floor(8 + Math.random() * 3); break;
+                    case "TIT_FOR_TAT": score = (elevation * 20000) - (myEnergy * 3.0) + (minDistToEnemy * 15); recommendedHarmonic = Math.floor(2 + Math.random() * 2); break;
+                    case "ATTACK": score = (elevation * 12000) + (enemyEnergy * 1.5) - myEnergy - (minDistToEnemy * 20); recommendedHarmonic = Math.floor(4 + Math.random() * 3); break;
+                    case "CONTEST": score = (elevation * 15000) + (enemyEnergy * 1.0) - (minDistToEnemy * 30); recommendedHarmonic = Math.floor(3 + Math.random() * 3); break;
+                    case "DEFEND": score = (elevation * 12000) + (myEnergy * 2.0) - (minDistToSelf * 30); recommendedHarmonic = Math.floor(5 + Math.random() * 3); break;
+                    case "EXPAND": default: score = (elevation * 18000) - (enemyEnergy * 2.0) - myEnergy + (minDistToEnemy * 10); recommendedHarmonic = Math.floor(2 + Math.random() * 3); break;
                 }
 
-                if (score > bestScore) {
-                    bestScore = score;
-                    bestX = rx;
-                    bestY = ry;
-                }
+                if (score > bestScore) { bestScore = score; bestX = rx; bestY = ry; chosenHarmonic = recommendedHarmonic; }
             }
 
-            let cpuHarmonic = Math.floor(2 + Math.random() * 8); 
-
-            executePlayerMove(bestX, bestY, 1, cpuHarmonic);
+            if (chosenHarmonic < 2) chosenHarmonic = 2; if (chosenHarmonic > 10) chosenHarmonic = 10; 
+            executePlayerMove(bestX, bestY, 1, chosenHarmonic);
             isCpuThinking = false;
-        }, 1000); 
+        }, 900); 
     }
 
-    function update() {
-        if (gameOver) return;
+    // ==========================================
+    // 6. INPUT HANDLING
+    // ==========================================
+    function updateMousePos(e) {
+        const rect = canvas.getBoundingClientRect();
+        const scaleX = simW / rect.width; const scaleY = simH / rect.height;
+        let isTouch = e.touches && e.touches.length > 0;
+        let clientX = isTouch ? e.touches[0].clientX : (e.clientX || 0);
+        let clientY = isTouch ? e.touches[0].clientY : (e.clientY || 0);
+        if (isTouch) clientY -= 60; 
+        if (e.type !== 'touchend') {
+            mouseX = (clientX - rect.left) * scaleX;
+            mouseY = (clientY - rect.top) * scaleY;
+        }
+    }
 
-        let harmonicPowerAccumulator = {
-            0: {1:0, 2:0, 3:0, 4:0, 5:0, 6:0, 7:0, 8:0, 9:0},
-            1: {1:0, 2:0, 3:0, 4:0, 5:0, 6:0, 7:0, 8:0, 9:0}
-        };
+    function handleInputStart(e) {
+        if (gameOver || evaluatingWin || helpEnabled || (vsCpu && activeColor === 1 && isCpuThinking)) return;
+        if (activeColor === 0 && p1Drops <= 0) return;
+        if (activeColor === 1 && p2Drops <= 0) return;
+        if (netConn && activeColor !== myPlayerId) return;
+        
+        isTargeting = true; isHovering = true;
+        updateMousePos(e);
+        if (e.type === 'touchstart') e.preventDefault();
+    }
+
+    function handleInputMove(e) {
+        updateMousePos(e);
+        if (isTargeting && e.type === 'touchmove') e.preventDefault();
+    }
+
+    function handleInputEnd(e) {
+        if (isTargeting) {
+            isTargeting = false;
+            if (netConn && activeColor !== myPlayerId) return;
+
+            if (mouseX >= 0 && mouseX < simW && mouseY >= 0 && mouseY < simH) {
+                let isValidPlacement = true;
+                for (let n of nodes) {
+                    if (Math.hypot(n.x - mouseX, n.y - mouseY) < EXCLUSION_RADIUS) { isValidPlacement = false; break; }
+                }
+                if (isValidPlacement) dispatchDrop(mouseX, mouseY, activeColor, currentHarmonic);
+            }
+            if (e.type === 'touchend') isHovering = false; 
+        }
+    }
+
+    canvas.addEventListener('mousedown', handleInputStart);
+    canvas.addEventListener('mousemove', handleInputMove);
+    canvas.addEventListener('mouseup', handleInputEnd);
+    canvas.addEventListener('mouseleave', () => { isHovering = false; isTargeting = false; });
+    canvas.addEventListener('mouseenter', () => isHovering = true);
+    canvas.addEventListener('touchstart', handleInputStart, {passive: false});
+    canvas.addEventListener('touchmove', handleInputMove, {passive: false});
+    canvas.addEventListener('touchend', handleInputEnd);
+    canvas.addEventListener('touchcancel', () => { isHovering = false; isTargeting = false; });
+
+    // ==========================================
+    // 7. FIXED TIMESTEP & GAME LOOP
+    // ==========================================
+    function updatePhysics() {
+        if (gameOver) return;
+        let harmonicPowerAccumulator = { 0: {1:0, 2:0, 3:0, 4:0, 5:0, 6:0, 7:0, 8:0, 9:0}, 1: {1:0, 2:0, 3:0, 4:0, 5:0, 6:0, 7:0, 8:0, 9:0} };
 
         if (simulationActive && !helpEnabled) { 
             time += 1;
-
             for (let node of nodes) {
                 let idx = Math.floor(node.x) + Math.floor(node.y) * simW;
                 let balancedAmplitude = getAmplitude(node.harmonic); 
-                
                 let elevation = terrainHeight[idx] / 255; 
                 let elevationMultiplier = 0.5 + (Math.pow(elevation, 2) * 3.5); 
-                
-                let force = Math.sin(time * node.freq) * balancedAmplitude * elevationMultiplier; 
-                z[node.player][idx] = force;
+                z[node.player][idx] = Math.sin(time * node.freq) * balancedAmplitude * elevationMultiplier; 
             }
 
             for (let y = 1; y < simH - 1; y++) {
                 for (let x = 1; x < simW - 1; x++) {
-                    let i = x + y * simW;
-                    
-                    let e0 = E[0][i], e1 = E[1][i];
-                    let alpha = terrainSpeed[i]; 
-
+                    let i = x + y * simW; let e0 = E[0][i], e1 = E[1][i]; let alpha = terrainSpeed[i]; 
                     for (let c = 0; c < 2; c++) {
                         let currentZ = z[c][i];
                         let laplacian = (z[c][i - 1] + z[c][i + 1] + z[c][i - simW] + z[c][i + simW] - 4 * currentZ);
                         let val = 2 * currentZ - zOld[c][i] + alpha * laplacian;
-                        
                         let enemyEnergy = (c === 0) ? e1 : e0;
                         let combatDamping = Math.max(0.6, 0.992 - (enemyEnergy * 0.005));
-                        
-                        let envDamping = terrainDamping[i];
-                        
-                        zNew[c][i] = val * combatDamping * edgeDamping[i] * envDamping;
+                        zNew[c][i] = val * combatDamping * edgeDamping[i] * terrainDamping[i];
                         E[c][i] = E[c][i] * 0.90 + Math.abs(z[c][i]) * 0.10;
                     }
                 }
             }
+            for(let c=0; c<2; c++) { let temp = zOld[c]; zOld[c] = z[c]; z[c] = zNew[c]; zNew[c] = temp; }
 
-            for(let c=0; c<2; c++) {
-                let temp = zOld[c]; zOld[c] = z[c]; z[c] = zNew[c]; zNew[c] = temp;
-            }
-
+            let p1Pixels = 0; let p2Pixels = 0;
             for (let y = 1; y < simH - 1; y++) {
                 for (let x = 1; x < simW - 1; x++) {
                     let i = x + y * simW;
-                    for (let c = 0; c < 2; c++) {
-                        E_smooth[c][i] = (E[c][i] * 2 + E[c][i-1] + E[c][i+1] + E[c][i-simW] + E[c][i+simW]) / 6;
-                    }
+                    for (let c = 0; c < 2; c++) E_smooth[c][i] = (E[c][i] * 2 + E[c][i-1] + E[c][i+1] + E[c][i-simW] + E[c][i+simW]) / 6;
+                    if (E_smooth[0][i] > E_smooth[1][i] + 10) p1Pixels++;
+                    else if (E_smooth[1][i] > E_smooth[0][i] + 10) p2Pixels++;
                 }
             }
+            currentP1Pct = (p1Pixels / bufferSize) * 100;
+            currentP2Pct = (p2Pixels / bufferSize) * 100;
 
             if (synthInitialized) {
                 nodes.forEach(node => {
-                    let sampleRadius = 45; 
-                    let mineCount = 0;
-                    let totalSampled = 0;
-                    let nx = Math.floor(node.x);
-                    let ny = Math.floor(node.y);
-
+                    let sampleRadius = 45; let mineCount = 0; let totalSampled = 0;
+                    let nx = Math.floor(node.x); let ny = Math.floor(node.y);
                     for (let dy = -sampleRadius; dy <= sampleRadius; dy += 5) {
                         for (let dx = -sampleRadius; dx <= sampleRadius; dx += 5) {
-                            let sx = nx + dx;
-                            let sy = ny + dy;
-                            if (sx >= 0 && sx < simW && sy >= 0 && sy < simH) {
-                                if (Math.hypot(dx, dy) <= sampleRadius) {
-                                    let sIdx = sx + sy * simW;
-                                    let myEnergy = E_smooth[node.player][sIdx];
-                                    let oppEnergy = E_smooth[node.player === 0 ? 1 : 0][sIdx];
-                                    
-                                    totalSampled++;
-                                    if (myEnergy > oppEnergy + 5) mineCount++;
-                                }
+                            let sx = nx + dx; let sy = ny + dy;
+                            if (sx >= 0 && sx < simW && sy >= 0 && sy < simH && Math.hypot(dx, dy) <= sampleRadius) {
+                                let sIdx = sx + sy * simW;
+                                let myEnergy = E_smooth[node.player][sIdx]; let oppEnergy = E_smooth[node.player === 0 ? 1 : 0][sIdx];
+                                totalSampled++; if (myEnergy > oppEnergy + 5) mineCount++;
                             }
                         }
                     }
-
-                    let dominanceFactor = totalSampled > 0 ? (mineCount / totalSampled) * 2.0 : 0.0;
-                    harmonicPowerAccumulator[node.player][node.uiHarmonic] += dominanceFactor;
+                    harmonicPowerAccumulator[node.player][node.uiHarmonic] += (totalSampled > 0 ? (mineCount / totalSampled) * 2.0 : 0.0);
                 });
-                
                 for (let p = 0; p <= 1; p++) {
-                    for (let hUI = 1; hUI <= 9; hUI++) {
-                        let currentPower = harmonicPowerAccumulator[p][hUI];
-                        synthVoices[p][hUI].setTerritoryPower(currentPower);
-                    }
+                    for (let hUI = 1; hUI <= 9; hUI++) synthVoices[p][hUI].setTerritoryPower(harmonicPowerAccumulator[p][hUI]);
                 }
             }
         }
-
-        let imgData = ctx.createImageData(simW, simH);
-        let data = imgData.data;
-        
-        let p1Pixels = 0;
-        let p2Pixels = 0;
-
-        let waveOpacityMult = peekTerrain ? 0.04 : 0.45;
-        let rippleOpacityMult = peekTerrain ? 0.05 : 0.15;
-
-        for (let i = 0; i < bufferSize; i++) {
-            let idx = i * 4;
-            
-            let h = terrainHeight[i];
-            let light = terrainLight[i];
-            let vig = vignetteMap[i];
-            
-            let base = (h * 0.12) + light + 10;
-
-            let blueRaw = E_smooth[0][i]; 
-            let amberRaw = E_smooth[1][i]; 
-            
-            if (blueRaw > amberRaw + 10) p1Pixels++;
-            else if (amberRaw > blueRaw + 10) p2Pixels++;
-
-            let blueVis = blueRaw * waveOpacityMult;
-            let amberVis = amberRaw * waveOpacityMult; 
-
-            let rawWave = (z[0][i] - z[1][i]) * rippleOpacityMult; 
-            let highlight = Math.max(0, rawWave);
-            let shadow = Math.max(0, -rawWave);
-
-            let rOut = base + amberVis + highlight - shadow;                     
-            let gOut = base + (blueVis * 0.5) + (amberVis * 0.65) + highlight - shadow; 
-            let bOut = base + (blueVis * 1.3) + highlight - shadow;              
-
-            data[idx] = Math.max(0, Math.min(255, rOut * vig));             
-            data[idx + 1] = Math.max(0, Math.min(255, gOut * vig)); 
-            data[idx + 2] = Math.max(0, Math.min(255, bOut * vig));         
-            data[idx + 3] = 255; 
-        }
-        ctx.putImageData(imgData, 0, 0);
 
         if (!helpEnabled) {
             for (let r = ripples.length - 1; r >= 0; r--) {
-                let rip = ripples[r];
-                rip.radius += 1.2;
-                rip.opacity -= 0.04;
-
-                if (rip.opacity <= 0) {
-                    ripples.splice(r, 1);
-                    continue;
-                }
-
-                if (!peekTerrain) {
-                    ctx.beginPath();
-                    ctx.arc(rip.x, rip.y, rip.radius, 0, Math.PI * 2);
-                    ctx.strokeStyle = rip.player === 0 ? 'rgba(59, 130, 246,' + rip.opacity + ')' : 'rgba(255, 176, 0,' + rip.opacity + ')';
-                    ctx.lineWidth = 1;
-                    ctx.stroke();
-                }
+                let rip = ripples[r]; rip.radius += 1.2; rip.opacity -= 0.04;
+                if (rip.opacity <= 0) ripples.splice(r, 1);
             }
         }
-
-        let p1Pct = (p1Pixels / bufferSize) * 100;
-        let p2Pct = (p2Pixels / bufferSize) * 100;
-        let neuPct = 100 - (p1Pct + p2Pct);
-        
-        currentP1Pct = p1Pct;
-        currentP2Pct = p2Pct;
-
-        barBlue.style.width = p1Pct + "%";
-        barAmber.style.width = p2Pct + "%";
-        barNeutral.style.width = neuPct + "%";
 
         let triggerFinalAnalysis = false;
-
         if (simulationActive && dominatingPlayer === -1) {
-            if (p1Pct >= WIN_THRESHOLD) {
-                dominatingPlayer = 0;
-                dropsRemaining = 3; 
-            } else if (p2Pct >= WIN_THRESHOLD) {
-                dominatingPlayer = 1;
-                dropsRemaining = 3; 
-            }
+            if (currentP1Pct >= WIN_THRESHOLD) { dominatingPlayer = 0; dropsRemaining = 3; } 
+            else if (currentP2Pct >= WIN_THRESHOLD) { dominatingPlayer = 1; dropsRemaining = 3; }
         } else if (simulationActive) {
-            if (dominatingPlayer === 0 && p1Pct < WIN_THRESHOLD) {
-                dominatingPlayer = -1;
-            } else if (dominatingPlayer === 1 && p2Pct < WIN_THRESHOLD) {
-                dominatingPlayer = -1;
-            }
+            if (dominatingPlayer === 0 && currentP1Pct < WIN_THRESHOLD) dominatingPlayer = -1;
+            else if (dominatingPlayer === 1 && currentP2Pct < WIN_THRESHOLD) dominatingPlayer = -1;
         }
 
-        if (dominatingPlayer !== -1 && dropsRemaining <= 0 && !evaluatingWin) {
-            triggerFinalAnalysis = true;
-        }
-        
-        if (p1Drops <= 0 && p2Drops <= 0 && !evaluatingWin) {
-            triggerFinalAnalysis = true;
-        }
+        if (dominatingPlayer !== -1 && dropsRemaining <= 0 && !evaluatingWin) triggerFinalAnalysis = true;
+        if (p1Drops <= 0 && p2Drops <= 0 && !evaluatingWin) triggerFinalAnalysis = true;
 
         if (triggerFinalAnalysis) {
-            evaluatingWin = true;
-            evalTimer = 0;
-            
-            let currentLeader = p1Pct > p2Pct ? 0 : 1;
+            evaluatingWin = true; evalTimer = 0;
+            let currentLeader = currentP1Pct > currentP2Pct ? 0 : 1;
             if (synthInitialized) {
-                for (let hUI = 1; hUI <= 9; hUI++) {
-                    synthVoices[currentLeader][hUI].triumph();
-                    synthVoices[currentLeader === 0 ? 1 : 0][hUI].fadeOut(0.4);
-                }
+                for (let hUI = 1; hUI <= 9; hUI++) { synthVoices[currentLeader][hUI].triumph(); synthVoices[currentLeader === 0 ? 1 : 0][hUI].fadeOut(0.4); }
             }
         }
 
@@ -1519,128 +1370,178 @@
                 gameOver = true;
                 if (synthInitialized) {
                     for (let p = 0; p <= 1; p++) {
-                        for (let hUI = 1; hUI <= 9; hUI++) {
-                            synthVoices[p][hUI].fadeOut(2.0);
-                        }
+                        for (let hUI = 1; hUI <= 9; hUI++) synthVoices[p][hUI].fadeOut(2.0);
                     }
                 }
             }
         }
-
-        if (!simulationActive) {
-            if (nodes.length === 0) {
-                turnIndicator.innerText = "> INITIALIZE: CH 1 DEPLOYMENT";
-                turnIndicator.style.color = "var(--ultramarine)";
-            } else if (nodes.length === 1) {
-                turnIndicator.innerText = "> INITIALIZE: CH 2 DEPLOYMENT";
-                turnIndicator.style.color = "var(--amber)";
-            }
-        } else if (gameOver) {
-            let finalWinner = p1Pct > p2Pct ? 0 : 1;
-            let winnerColor = finalWinner === 0 ? "CH 1" : "CH 2";
-            let colorHex = finalWinner === 0 ? "var(--ultramarine)" : "var(--amber)";
-            turnIndicator.style.color = colorHex;
-            turnIndicator.innerText = `[ SYSTEM ASSIMILATED BY ${winnerColor} ]`;
-        } else if (evaluatingWin) {
-            let currentLeader = p1Pct > p2Pct ? 0 : 1;
-            let colorHex = currentLeader === 0 ? "var(--ultramarine)" : "var(--amber)";
-            let timeLeft = ((SETTLE_FRAMES - evalTimer) / 60).toFixed(1);
-            turnIndicator.style.color = colorHex;
-            turnIndicator.innerText = `ANALYZING FINAL WAVEFRONT... ${timeLeft}s`;
-        } else if (dominatingPlayer !== -1) {
-            let domColor = dominatingPlayer === 0 ? "CH 1" : "CH 2";
-            let colorHex = dominatingPlayer === 0 ? "var(--ultramarine)" : "var(--amber)";
-            turnIndicator.style.color = colorHex;
-            turnIndicator.innerText = `! ${domColor} RESONANCE CRITICAL ! ${dropsRemaining} TURNS REMAINING`;
-        }
-
-        ctx.textAlign = "center";
-        ctx.textBaseline = "middle";
-        ctx.font = "bold 11px 'Courier New'";
-
-        for (let node of nodes) {
-            let displayChar = node.uiHarmonic.toString();
-            
-            ctx.fillStyle = "#000000";
-            ctx.fillText(displayChar, node.x + 1, node.y + 1);
-            
-            ctx.fillStyle = node.player === 0 ? '#3b82f6' : '#ffb000';
-            ctx.fillText(displayChar, node.x, node.y);
-        }
-
-        if (isHovering && !gameOver && !evaluatingWin && !helpEnabled && !(vsCpu && activeColor === 1 && isCpuThinking)) {
-            
-            let isValidPlacement = true;
-            for (let n of nodes) {
-                if (Math.hypot(n.x - mouseX, n.y - mouseY) < EXCLUSION_RADIUS) {
-                    isValidPlacement = false;
-                    break;
-                }
-            }
-
-            let ringSpacing = 45.0 / currentHarmonic;
-            
-            ctx.lineWidth = 1;
-            
-            let colorR = activeColor === 0 ? 59 : 255;
-            let colorG = activeColor === 0 ? 130 : 176;
-            let colorB = activeColor === 0 ? 246 : 0;
-            
-            if (!isValidPlacement) {
-                colorR = 255; colorG = 68; colorB = 68; 
-            }
-            
-            for (let i = 1; i <= 6; i++) {
-                let r = ringSpacing * i;
-                ctx.beginPath();
-                ctx.arc(mouseX, mouseY, r, 0, Math.PI * 2);
-                let alpha = 0.5 - (i * 0.07);
-                ctx.strokeStyle = `rgba(${colorR}, ${colorG}, ${colorB}, ${alpha})`;
-                ctx.stroke();
-            }
-            
-            ctx.beginPath();
-            if (isValidPlacement) {
-                ctx.strokeStyle = activeColor === 0 ? '#3b82f6' : '#ffb000';
-                ctx.moveTo(mouseX - 6, mouseY);
-                ctx.lineTo(mouseX + 6, mouseY);
-                ctx.moveTo(mouseX, mouseY - 6);
-                ctx.lineTo(mouseX, mouseY + 6);
-            } else {
-                ctx.strokeStyle = 'var(--error-red)';
-                ctx.moveTo(mouseX - 5, mouseY - 5);
-                ctx.lineTo(mouseX + 5, mouseY + 5);
-                ctx.moveTo(mouseX + 5, mouseY - 5);
-                ctx.lineTo(mouseX - 5, mouseY + 5);
-            }
-            ctx.stroke();
-
-            let hIdx = Math.floor(mouseX) + Math.floor(mouseY) * simW;
-            if (hIdx >= 0 && hIdx < bufferSize) {
-                ctx.textAlign = "left";
-                ctx.textBaseline = "bottom";
-                ctx.font = "bold 10px 'Courier New'";
-                
-                ctx.fillStyle = "#000000";
-                
-                if (isValidPlacement) {
-                    let hElev = terrainHeight[hIdx] / 255.0;
-                    let powerMultiplier = 0.5 + (Math.pow(hElev, 2) * 3.5);
-                    ctx.fillText(`AMP:${powerMultiplier.toFixed(1)}x`, mouseX + 9, mouseY - 7);
-                    ctx.fillStyle = activeColor === 0 ? '#3b82f6' : '#ffb000';
-                    ctx.fillText(`AMP:${powerMultiplier.toFixed(1)}x`, mouseX + 8, mouseY - 8);
-                } else {
-                    ctx.fillText(`[BLOCKED]`, mouseX + 9, mouseY - 7);
-                    ctx.fillStyle = 'var(--error-red)';
-                    ctx.fillText(`[BLOCKED]`, mouseX + 8, mouseY - 8);
-                }
-            }
-        }
-
-        if (!gameOver) requestAnimationFrame(update);
     }
 
-    update();
+    function renderVisuals() {
+        let imgData = ctx.createImageData(simW, simH); let data = imgData.data;
+        let waveOpacityMult = peekTerrain ? 0.04 : 0.45; let rippleOpacityMult = peekTerrain ? 0.05 : 0.15;
+        for (let i = 0; i < bufferSize; i++) {
+            let idx = i * 4;
+            let base = (terrainHeight[i] * 0.12) + terrainLight[i] + 10;
+            let blueVis = E_smooth[0][i] * waveOpacityMult; let amberVis = E_smooth[1][i] * waveOpacityMult; 
+            let rawWave = (z[0][i] - z[1][i]) * rippleOpacityMult; 
+            let highlight = Math.max(0, rawWave); let shadow = Math.max(0, -rawWave);
+            let rOut = base + amberVis + highlight - shadow;                      
+            let gOut = base + (blueVis * 0.5) + (amberVis * 0.65) + highlight - shadow; 
+            let bOut = base + (blueVis * 1.3) + highlight - shadow;              
+            data[idx] = Math.max(0, Math.min(255, rOut * vignetteMap[i]));              
+            data[idx + 1] = Math.max(0, Math.min(255, gOut * vignetteMap[i])); 
+            data[idx + 2] = Math.max(0, Math.min(255, bOut * vignetteMap[i]));         
+            data[idx + 3] = 255; 
+        }
+        ctx.putImageData(imgData, 0, 0);
+
+        if (!helpEnabled && !peekTerrain) {
+            for (let rip of ripples) {
+                ctx.beginPath(); ctx.arc(rip.x, rip.y, rip.radius, 0, Math.PI * 2);
+                ctx.strokeStyle = rip.player === 0 ? `rgba(59, 130, 246, ${rip.opacity})` : `rgba(255, 176, 0, ${rip.opacity})`;
+                ctx.lineWidth = 1; ctx.stroke();
+            }
+        }
+
+        barBlue.style.width = currentP1Pct + "%";
+        barAmber.style.width = currentP2Pct + "%";
+        barNeutral.style.width = (100 - (currentP1Pct + currentP2Pct)) + "%";
+
+        // TTY State Machine
+        if (ttyOverrideTimer > 0) {
+            turnIndicator.style.color = ttyOverrideColor;
+            turnIndicator.innerText = ttyOverrideMsg;
+            ttyOverrideTimer--;
+        } else if (ttyPersistentMsg) {
+            turnIndicator.style.color = ttyPersistentColor;
+            turnIndicator.innerText = ttyPersistentMsg;
+        } else if (!simulationActive) {
+            if (nodes.length === 0) { turnIndicator.innerText = "> INITIALIZE: CH 1 DEPLOYMENT"; turnIndicator.style.color = "var(--ultramarine)"; } 
+            else if (nodes.length === 1) { turnIndicator.innerText = "> INITIALIZE: CH 2 DEPLOYMENT"; turnIndicator.style.color = "var(--amber)"; }
+        } else if (gameOver) {
+            let finalWinner = currentP1Pct > currentP2Pct ? 0 : 1;
+            turnIndicator.style.color = finalWinner === 0 ? "var(--ultramarine)" : "var(--amber)";
+            turnIndicator.innerText = `[ SYSTEM ASSIMILATED BY CH ${finalWinner + 1} ]`;
+        } else if (evaluatingWin) {
+            let currentLeader = currentP1Pct > currentP2Pct ? 0 : 1;
+            turnIndicator.style.color = currentLeader === 0 ? "var(--ultramarine)" : "var(--amber)";
+            turnIndicator.innerText = `ANALYZING FINAL WAVEFRONT... ${((SETTLE_FRAMES - evalTimer) / 60).toFixed(1)}s`;
+        } else if (dominatingPlayer !== -1) {
+            turnIndicator.style.color = dominatingPlayer === 0 ? "var(--ultramarine)" : "var(--amber)";
+            turnIndicator.innerText = `! CH ${dominatingPlayer + 1} RESONANCE CRITICAL ! ${dropsRemaining} TURNS REMAINING`;
+        } else {
+            if (activeColor === 0) { 
+                turnIndicator.innerText = `> CH 1 (ULTRAMARINE) ACTIVE - ${p1Drops} DROPS LEFT`; 
+                turnIndicator.style.color = "var(--ultramarine)"; 
+            } else { 
+                turnIndicator.innerText = `> CH 2 (AMBER) ACTIVE - ${p2Drops} DROPS LEFT`; 
+                turnIndicator.style.color = "var(--amber)"; 
+            }
+            if (vsCpu && activeColor === 1 && isCpuThinking) {
+                turnIndicator.innerText = "> CH 2 (AMBER) COMPUTING TACTICS...";
+                turnIndicator.style.color = "var(--amber)";
+            }
+        }
+
+        ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.font = "bold 11px 'Courier New'";
+        for (let node of nodes) {
+            let displayChar = node.uiHarmonic.toString();
+            ctx.fillStyle = "#000000"; ctx.fillText(displayChar, node.x + 1, node.y + 1);
+            ctx.fillStyle = node.player === 0 ? '#3b82f6' : '#ffb000'; ctx.fillText(displayChar, node.x, node.y);
+        }
+
+        // Draw Interactive Targeting or Standby Crosshair
+        if ((isHovering || isTargeting) && mouseX >= 0 && mouseY >= 0 && !helpEnabled) {
+            
+            let isMyTurn = true;
+            if (gameOver || evaluatingWin) isMyTurn = false;
+            if (vsCpu && activeColor === 1) isMyTurn = false;
+            if (netConn && activeColor !== myPlayerId) isMyTurn = false;
+
+            if (isMyTurn) {
+                let isValidPlacement = true;
+                for (let n of nodes) { if (Math.hypot(n.x - mouseX, n.y - mouseY) < EXCLUSION_RADIUS) { isValidPlacement = false; break; } }
+                let ringSpacing = 45.0 / currentHarmonic; ctx.lineWidth = 1;
+                let colorStr = isValidPlacement ? (activeColor === 0 ? '59,130,246' : '255,176,0') : '255,68,68';
+                for (let i = 1; i <= 6; i++) {
+                    ctx.beginPath(); ctx.arc(mouseX, mouseY, ringSpacing * i, 0, Math.PI * 2);
+                    ctx.strokeStyle = `rgba(${colorStr}, ${0.5 - (i * 0.07)})`; ctx.stroke();
+                }
+                ctx.beginPath();
+                ctx.strokeStyle = isValidPlacement ? (activeColor === 0 ? '#3b82f6' : '#ffb000') : 'var(--error-red)';
+                if (isValidPlacement) {
+                    ctx.moveTo(mouseX - 6, mouseY); ctx.lineTo(mouseX + 6, mouseY);
+                    ctx.moveTo(mouseX, mouseY - 6); ctx.lineTo(mouseX, mouseY + 6);
+                } else {
+                    ctx.moveTo(mouseX - 5, mouseY - 5); ctx.lineTo(mouseX + 5, mouseY + 5);
+                    ctx.moveTo(mouseX + 5, mouseY - 5); ctx.lineTo(mouseX - 5, mouseY + 5);
+                }
+                ctx.stroke();
+
+                let hIdx = Math.floor(mouseX) + Math.floor(mouseY) * simW;
+                if (hIdx >= 0 && hIdx < bufferSize) {
+                    ctx.textAlign = "left"; ctx.textBaseline = "bottom"; ctx.font = "bold 10px 'Courier New'";
+                    let pMult = 0.5 + (Math.pow(terrainHeight[hIdx] / 255.0, 2) * 3.5);
+                    let txt = isValidPlacement ? `AMP:${pMult.toFixed(1)}x` : `[BLOCKED]`;
+                    ctx.fillStyle = "#000000"; ctx.fillText(txt, mouseX + 9, mouseY - 7);
+                    ctx.fillStyle = isValidPlacement ? (activeColor === 0 ? '#3b82f6' : '#ffb000') : 'var(--error-red)';
+                    ctx.fillText(txt, mouseX + 8, mouseY - 8);
+                }
+            } else {
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.strokeStyle = 'rgba(120, 120, 120, 0.5)';
+                ctx.moveTo(mouseX - 4, mouseY); ctx.lineTo(mouseX + 4, mouseY);
+                ctx.moveTo(mouseX, mouseY - 4); ctx.lineTo(mouseX, mouseY + 4);
+                ctx.stroke();
+
+                ctx.textAlign = "left"; ctx.textBaseline = "bottom"; ctx.font = "bold 10px 'Courier New'";
+                let txt = "[STANDBY]";
+                if (gameOver) txt = "[SYSTEM HALTED]";
+                else if (evaluatingWin) txt = "[ANALYZING]";
+                
+                ctx.fillStyle = "#000000"; ctx.fillText(txt, mouseX + 9, mouseY - 7);
+                ctx.fillStyle = 'rgba(120, 120, 120, 0.8)'; ctx.fillText(txt, mouseX + 8, mouseY - 8);
+            }
+        }
+    }
+
+    function gameLoop(currentTime) {
+        if (!lastTime) lastTime = currentTime;
+        let deltaTime = currentTime - lastTime;
+        if (deltaTime > 250) deltaTime = 250; 
+        lastTime = currentTime; accumulator += deltaTime;
+        while (accumulator >= FIXED_TIME_STEP) { updatePhysics(); accumulator -= FIXED_TIME_STEP; }
+        renderVisuals();
+        requestAnimationFrame(gameLoop);
+    }
+
+    // ==========================================
+    // 8. BOOT SEQUENCE
+    // ==========================================
+    initNetwork();
+    generateTerrain();
+
+    // 1. JIT Compiler Warmup (Forces V8 to optimize the physics loops before play)
+    let tmpHelp = helpEnabled;
+    helpEnabled = false;
+    simulationActive = true;
+    for(let i=0; i<8; i++) updatePhysics();
+    simulationActive = false;
+    helpEnabled = tmpHelp;
+    time = 0;
+
+    // 2. Audio Graph Pre-Warm (Builds 54 WebAudio Oscillators invisibly on first movement)
+    const preWarmSystem = () => {
+        try { ensureAudioInit(); } catch(e) {}
+        window.removeEventListener('mousemove', preWarmSystem);
+        window.removeEventListener('touchstart', preWarmSystem);
+    };
+    window.addEventListener('mousemove', preWarmSystem, { once: true });
+    window.addEventListener('touchstart', preWarmSystem, { once: true });
+
+    requestAnimationFrame(gameLoop); 
 </script>
 </body>
 </html>
